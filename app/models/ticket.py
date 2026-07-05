@@ -131,6 +131,22 @@ class Ticket(Base):
         server_default=func.current_timestamp(),
     )
 
+    priority_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    suggested_reply: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    acknowledgement_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+    )
+
     attachments: Mapped[list["TicketAttachment"]] = relationship(
         back_populates="ticket",
         cascade="all, delete-orphan",
@@ -147,14 +163,4 @@ class Ticket(Base):
         back_populates="ticket",
         cascade="all, delete-orphan",
         passive_deletes=True,
-    )
-
-    priority_reason: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
-    suggested_reply: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
     )

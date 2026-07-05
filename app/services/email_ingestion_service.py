@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
 
 from app.core.constants import (
     FailureType,
@@ -19,7 +20,11 @@ from app.schemas.ingestion_schema import (
     IngestionBatchResult,
     IngestionFailure,
 )
+from app.services.acknowledgement_service import (
+    AcknowledgementService,
+)
 from app.services.imap_service import IMAPService
+from app.services.workflow_service import WorkflowService
 
 
 logger = get_logger(__name__)
@@ -30,10 +35,20 @@ class EmailIngestionService:
     def __init__(
         self,
         imap_service: IMAPService | None = None,
+        workflow_service: WorkflowService | None = None,
+        acknowledgement_service: (
+            AcknowledgementService | None
+        ) = None,
+        db: Session | None = None,
     ) -> None:
         self.imap_service = (
             imap_service or IMAPService()
         )
+        self.workflow_service = workflow_service
+        self.acknowledgement_service = (
+            acknowledgement_service
+        )
+        self.db = db
 
     def _validate_ingested_email(
         self,
@@ -115,6 +130,38 @@ class EmailIngestionService:
                 failures=validation_failures,
             )
 
+        ticket_id: int | None = None
+
+        if self.workflow_service is not None:
+            workflow_result = (
+                self.workflow_service.process_email(
+                    parsed_email
+                )
+            )
+
+            ticket_id = workflow_result.ticket_id
+
+            if (
+                self.acknowledgement_service is not None
+                and self.db is not None
+            ):
+                try:
+                    self.acknowledgement_service.send_acknowledgement(
+                        self.db,
+                        ticket_id=ticket_id,
+                    )
+
+                except Exception:
+                    logger.exception(
+                        "Customer acknowledgement delivery failed.",
+                        extra={
+                            "ticket_id": ticket_id,
+                            "message_id": (
+                                parsed_email.message_id
+                            ),
+                        },
+                    )
+
         log_event(
             logger,
             logging.INFO,
@@ -125,6 +172,7 @@ class EmailIngestionService:
             attachment_count=len(
                 parsed_email.attachments
             ),
+            ticket_id=ticket_id,
         )
 
         return EmailProcessingResult(

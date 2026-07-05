@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
 from sqlalchemy import (
     func,
     select,
@@ -5,7 +8,10 @@ from sqlalchemy import (
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.constants import WorkflowExecutionStatus
+from app.core.constants import (
+    WorkflowExecutionStatus,
+    WorkflowStage,
+)
 from app.core.exceptions import (
     DuplicateWorkflowExecutionError,
     RepositoryError,
@@ -61,8 +67,16 @@ class WorkflowExecutionRepository:
         message_id: str,
     ) -> WorkflowExecution | None:
         try:
-            statement = select(WorkflowExecution).where(
-                WorkflowExecution.message_id == message_id
+            statement = (
+                select(WorkflowExecution)
+                .where(
+                    WorkflowExecution.message_id == message_id
+                )
+                .order_by(
+                    WorkflowExecution.attempt_number.desc(),
+                    WorkflowExecution.id.desc(),
+                )
+                .limit(1)
             )
 
             return self._session.scalar(statement)
@@ -77,8 +91,16 @@ class WorkflowExecutionRepository:
         ticket_id: int,
     ) -> WorkflowExecution | None:
         try:
-            statement = select(WorkflowExecution).where(
-                WorkflowExecution.ticket_id == ticket_id
+            statement = (
+                select(WorkflowExecution)
+                .where(
+                    WorkflowExecution.ticket_id == ticket_id
+                )
+                .order_by(
+                    WorkflowExecution.attempt_number.desc(),
+                    WorkflowExecution.id.desc(),
+                )
+                .limit(1)
             )
 
             return self._session.scalar(statement)
@@ -193,12 +215,17 @@ class WorkflowExecutionRepository:
         duration_ms: int,
     ) -> WorkflowExecution:
         execution.status = WorkflowExecutionStatus.SUCCESS
-        execution.current_stage = "WORKFLOW_COMPLETED"
+        execution.current_stage = (
+            WorkflowStage.WORKFLOW_COMPLETED
+        )
         execution.completed_at = completed_at
         execution.duration_ms = duration_ms
+
         execution.failure_stage = None
         execution.error_type = None
         execution.error_message = None
+        execution.retry_exhausted = False
+        execution.failed_at = None
 
         self._flush_mutation()
 
@@ -219,10 +246,94 @@ class WorkflowExecutionRepository:
         execution.failure_stage = execution.current_stage
         execution.error_type = error_type
         execution.error_message = error_message
+        execution.failed_at = completed_at
 
         self._flush_mutation()
 
         return execution
+
+    def mark_failed(
+        self,
+        execution: WorkflowExecution,
+        *,
+        failed_stage: str,
+        exception_type: str,
+        sanitized_error_message: str,
+        retry_count: int,
+        retry_exhausted: bool,
+    ) -> WorkflowExecution:
+        failed_at = datetime.now(timezone.utc)
+
+        duration_ms = max(
+            0,
+            int(
+                (
+                    failed_at - execution.started_at
+                ).total_seconds()
+                * 1000
+            ),
+        )
+
+        execution.status = WorkflowExecutionStatus.FAILED
+        execution.current_stage = failed_stage
+        execution.failure_stage = failed_stage
+
+        execution.error_type = exception_type
+        execution.error_message = sanitized_error_message
+
+        execution.retry_count = retry_count
+        execution.retry_exhausted = retry_exhausted
+
+        execution.failed_at = failed_at
+        execution.completed_at = failed_at
+        execution.duration_ms = duration_ms
+
+        self._flush_mutation()
+
+        return execution
+
+    def create_retry_execution(
+        self,
+        *,
+        original_execution: WorkflowExecution,
+    ) -> WorkflowExecution:
+        retry_execution = WorkflowExecution(
+            execution_id=str(uuid4()),
+            message_id=original_execution.message_id,
+            ticket_id=original_execution.ticket_id,
+            started_at=datetime.now(timezone.utc),
+            completed_at=None,
+            duration_ms=None,
+            status=WorkflowExecutionStatus.RUNNING,
+            current_stage=WorkflowStage.EMAIL_FETCHED,
+            retry_count=0,
+            failure_stage=None,
+            error_type=None,
+            error_message=None,
+            retry_exhausted=False,
+            failed_at=None,
+            parent_execution_id=original_execution.id,
+            attempt_number=(
+                original_execution.attempt_number + 1
+            ),
+            execution_metadata=None,
+        )
+
+        try:
+            self._session.add(retry_execution)
+            self._session.flush()
+
+            return retry_execution
+
+        except IntegrityError as exc:
+            raise DuplicateWorkflowExecutionError(
+                "Unable to create retry workflow execution."
+            ) from exc
+
+        except SQLAlchemyError as exc:
+            raise RepositoryError(
+                "Retry workflow-execution persistence failed."
+            ) from exc
 
     def increment_retry_count(
         self,

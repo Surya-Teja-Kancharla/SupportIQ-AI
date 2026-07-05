@@ -11,8 +11,14 @@ from app.core.constants import (
 )
 from app.core.logging import get_logger, log_event
 from app.models.workflow_execution import WorkflowExecution
+from app.repositories.dead_letter_repository import (
+    DeadLetterRepository,
+)
 from app.repositories.workflow_execution_repository import (
     WorkflowExecutionRepository,
+)
+from app.services.failure_handling_service import (
+    FailureHandlingService,
 )
 
 
@@ -27,9 +33,21 @@ class WorkflowExecutionService:
         repository: WorkflowExecutionRepository,
         *,
         session: Session | None = None,
+        failure_handling_service: (
+            FailureHandlingService | None
+        ) = None,
+        dead_letter_repository: (
+            DeadLetterRepository | None
+        ) = None,
     ) -> None:
         self._repository = repository
         self._session = session
+        self.failure_handling_service = (
+            failure_handling_service
+        )
+        self.dead_letter_repository = (
+            dead_letter_repository
+        )
 
     def start_execution(
         self,
@@ -52,6 +70,10 @@ class WorkflowExecutionService:
             failure_stage=None,
             error_type=None,
             error_message=None,
+            retry_exhausted=False,
+            failed_at=None,
+            parent_execution_id=None,
+            attempt_number=1,
             execution_metadata=None,
         )
 
@@ -159,21 +181,96 @@ class WorkflowExecutionService:
         self,
         execution: WorkflowExecution,
         *,
-        error: Exception,
+        error: Exception | None = None,
+        stage: str | None = None,
+        exc: Exception | None = None,
+        retry_count: int | None = None,
+        retry_exhausted: bool = False,
     ) -> WorkflowExecution:
-        completed_at = datetime.now(timezone.utc)
+        failure = exc if exc is not None else error
 
-        duration_ms = self.calculate_duration_ms(
-            execution.started_at,
-            completed_at,
+        if failure is None:
+            raise ValueError(
+                "An exception must be provided using "
+                "'error' or 'exc'."
+            )
+
+        failed_stage = (
+            stage
+            if stage is not None
+            else str(execution.current_stage)
         )
 
-        self._repository.mark_failure(
-            execution,
-            completed_at=completed_at,
-            duration_ms=duration_ms,
-            error_type=type(error).__name__,
-            error_message=str(error),
+        effective_retry_count = (
+            retry_count
+            if retry_count is not None
+            else execution.retry_count
+        )
+
+        if self.failure_handling_service is None:
+            completed_at = datetime.now(timezone.utc)
+
+            duration_ms = self.calculate_duration_ms(
+                execution.started_at,
+                completed_at,
+            )
+
+            self._repository.mark_failure(
+                execution,
+                completed_at=completed_at,
+                duration_ms=duration_ms,
+                error_type=type(failure).__name__,
+                error_message=str(failure),
+            )
+
+        else:
+            classification = (
+                self.failure_handling_service.classify(
+                    failure
+                )
+            )
+
+            self._repository.mark_failed(
+                execution,
+                failed_stage=failed_stage,
+                exception_type=(
+                    classification.exception_type
+                ),
+                sanitized_error_message=(
+                    classification.sanitized_message
+                ),
+                retry_count=effective_retry_count,
+                retry_exhausted=retry_exhausted,
+            )
+
+            if self.dead_letter_repository is not None:
+                self.dead_letter_repository.create(
+                    workflow_execution_id=execution.id,
+                    ticket_id=execution.ticket_id,
+                    failed_stage=failed_stage,
+                    exception_type=(
+                        classification.exception_type
+                    ),
+                    sanitized_error_message=(
+                        classification.sanitized_message
+                    ),
+                    retry_count=effective_retry_count,
+                    retry_exhausted=retry_exhausted,
+                )
+
+        completed_at = (
+            execution.failed_at
+            if execution.failed_at is not None
+            else execution.completed_at
+        )
+
+        duration_ms = (
+            self.calculate_duration_ms(
+                execution.started_at,
+                completed_at,
+            )
+            if completed_at is not None
+            else None
         )
 
         log_event(
@@ -186,6 +283,8 @@ class WorkflowExecutionService:
             ticket_id=execution.ticket_id,
             current_stage=execution.current_stage,
             error_type=execution.error_type,
+            retry_count=execution.retry_count,
+            retry_exhausted=execution.retry_exhausted,
             duration_ms=duration_ms,
         )
 
@@ -198,7 +297,6 @@ class WorkflowExecutionService:
         return self._repository.get_by_execution_id(
             execution_id
         )
-
 
     def get_by_message_id(
         self,

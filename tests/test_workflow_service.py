@@ -1,11 +1,14 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import MagicMock, Mock, call
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from sqlalchemy.orm import Session
 
-from app.core.constants import WorkflowStage
+from app.core.constants import (
+    WorkflowExecutionStatus,
+    WorkflowStage,
+)
 from app.core.exceptions import DuplicateWorkflowError
 from app.schemas.email_schema import ParsedEmail
 from app.schemas.normalized_ticket_schema import (
@@ -114,7 +117,7 @@ def build_reply_suggestion() -> ReplySuggestionResponse:
             "payment API outage and will provide updates as soon as possible."
         )
     )
-    
+
 
 def build_ticket_creation_result() -> TicketCreationResult:
     return TicketCreationResult(
@@ -143,44 +146,68 @@ def build_service():
     ticket_creation_result = build_ticket_creation_result()
 
     workflow_execution_repository.get_by_message_id.return_value = None
+
     workflow_execution_service.get_by_message_id.side_effect = (
-        lambda message_id: workflow_execution_repository.get_by_message_id(
-            message_id
+        lambda message_id: (
+            workflow_execution_repository.get_by_message_id(
+                message_id
+            )
         )
     )
 
+    workflow_execution = SimpleNamespace(
+        id=1,
+        execution_id="execution-123",
+        message_id="<hour9-workflow-service@example.com>",
+        ticket_id=None,
+        started_at=datetime.now(timezone.utc),
+        completed_at=None,
+        duration_ms=None,
+        status=WorkflowExecutionStatus.RUNNING,
+        current_stage=WorkflowStage.EMAIL_PARSED,
+        retry_count=0,
+        retry_exhausted=False,
+        failure_stage=None,
+        error_type=None,
+        error_message=None,
+        failed_at=None,
+        parent_execution_id=None,
+        attempt_number=1,
+        execution_metadata=None,
+    )
+
     def start_execution(*, message_id, stage):
-        execution = SimpleNamespace(
-            execution_id="execution-123",
-            message_id=message_id,
-            ticket_id=None,
-            started_at=datetime.now(timezone.utc),
-            completed_at=None,
-            duration_ms=None,
-            status=SimpleNamespace(value="RUNNING"),
-            current_stage=stage,
-            retry_count=0,
-            failure_stage=None,
-            error_type=None,
-            error_message=None,
-            execution_metadata=None,
+        workflow_execution.message_id = message_id
+        workflow_execution.current_stage = stage
+
+        workflow_execution_repository.add(
+            workflow_execution
         )
-        workflow_execution_repository.add(execution)
-        return execution
+
+        return workflow_execution
 
     workflow_execution_service.start_execution.side_effect = (
         start_execution
     )
+
     workflow_execution_service.advance_stage.side_effect = (
-        lambda execution, *, stage: setattr(
-            execution,
-            "current_stage",
-            stage,
-        ) or execution
+        lambda execution, *, stage: (
+            setattr(
+                execution,
+                "current_stage",
+                stage,
+            )
+            or execution
+        )
     )
+
     workflow_execution_service.attach_ticket.side_effect = (
         lambda execution, *, ticket_id: (
-            setattr(execution, "ticket_id", ticket_id),
+            setattr(
+                execution,
+                "ticket_id",
+                ticket_id,
+            ),
             setattr(
                 execution,
                 "current_stage",
@@ -189,9 +216,11 @@ def build_service():
             execution,
         )[-1]
     )
+
     workflow_execution_service.fail_execution.side_effect = (
-        lambda execution, *, error=None: execution
+        lambda execution, **kwargs: execution
     )
+
     workflow_execution_service.complete_execution.side_effect = (
         lambda execution: execution
     )
@@ -202,26 +231,40 @@ def build_service():
         normalized_analysis
     )
 
-    priority_service.assign_priority.return_value = priority_decision
+    priority_service.assign_priority.return_value = (
+        priority_decision
+    )
 
-    routing_service.route_ticket.return_value = routing_decision
+    routing_service.route_ticket.return_value = (
+        routing_decision
+    )
 
     reply_suggestion_service.generate_suggestion.return_value = (
         reply_suggestion
     )
 
-    ticket_service.create_ticket.return_value = ticket_creation_result
+    ticket_service.create_ticket.return_value = (
+        ticket_creation_result
+    )
 
     service = WorkflowService(
         session=session,
         llm_service=llm_service,
-        ticket_analysis_normalizer=ticket_analysis_normalizer,
+        ticket_analysis_normalizer=(
+            ticket_analysis_normalizer
+        ),
         priority_service=priority_service,
         routing_service=routing_service,
-        reply_suggestion_service=reply_suggestion_service,
+        reply_suggestion_service=(
+            reply_suggestion_service
+        ),
         ticket_service=ticket_service,
-        workflow_execution_service=workflow_execution_service,
-        workflow_execution_repository=workflow_execution_repository,
+        workflow_execution_service=(
+            workflow_execution_service
+        ),
+        workflow_execution_repository=(
+            workflow_execution_repository
+        ),
     )
 
     return SimpleNamespace(
@@ -235,6 +278,7 @@ def build_service():
         ticket_service=ticket_service,
         workflow_repository=workflow_execution_repository,
         workflow_execution_service=workflow_execution_service,
+        workflow_execution=workflow_execution,
         raw_analysis=raw_analysis,
         normalized_analysis=normalized_analysis,
         priority_decision=priority_decision,
@@ -251,7 +295,9 @@ def test_process_email_checks_message_id_before_ai_analysis():
     events = []
 
     context.workflow_repository.get_by_message_id.side_effect = (
-        lambda message_id: events.append("idempotency_check")
+        lambda message_id: events.append(
+            "idempotency_check"
+        )
     )
 
     context.llm_service.analyze_ticket.side_effect = (
@@ -352,9 +398,13 @@ def test_process_email_generates_reply_suggestion():
 
     context.service.process_email(email)
 
-    context.reply_suggestion_service.generate_suggestion.assert_called_once_with(
-        email=email,
-        analysis=context.normalized_analysis,
+    (
+        context.reply_suggestion_service
+        .generate_suggestion
+        .assert_called_once_with(
+            email=email,
+            analysis=context.normalized_analysis,
+        )
     )
 
 
@@ -380,14 +430,19 @@ def test_process_email_creates_workflow_execution():
 
     context.workflow_repository.add.assert_called_once()
 
-    execution = context.workflow_repository.add.call_args.args[0]
+    execution = (
+        context.workflow_repository.add.call_args.args[0]
+    )
 
     assert execution.message_id == (
         "<hour9-workflow-service@example.com>"
     )
     assert execution.ticket_id == 101
     assert execution.status.value == "RUNNING"
-    assert execution.current_stage == WorkflowStage.TICKET_CREATED
+    assert (
+        execution.current_stage
+        == WorkflowStage.TICKET_CREATED
+    )
     assert result.execution_id == execution.execution_id
 
 
@@ -406,50 +461,103 @@ def test_process_email_returns_processing_result():
     result = context.service.process_email(build_email())
 
     assert result.ticket_id == 101
-    assert result.ticket_number == "SUP-20260705-TEST0001"
+    assert (
+        result.ticket_number
+        == "SUP-20260705-TEST0001"
+    )
     assert result.message_id == (
         "<hour9-workflow-service@example.com>"
     )
     assert result.analysis == context.normalized_analysis
-    assert result.priority_decision == context.priority_decision
-    assert result.routing_decision == context.routing_decision
-    assert result.reply_suggestion == context.reply_suggestion
+    assert (
+        result.priority_decision
+        == context.priority_decision
+    )
+    assert (
+        result.routing_decision
+        == context.routing_decision
+    )
+    assert (
+        result.reply_suggestion
+        == context.reply_suggestion
+    )
 
 
 def test_process_email_reuses_passed_workflow_execution():
     context = build_service()
     email = build_email()
-    workflow_execution = MagicMock()
-    workflow_execution.execution_id = "execution-123"
-    workflow_execution.message_id = email.message_id
+
+    workflow_execution = SimpleNamespace(
+        id=1,
+        execution_id="execution-123",
+        message_id=email.message_id,
+        ticket_id=None,
+        started_at=datetime.now(timezone.utc),
+        completed_at=None,
+        duration_ms=None,
+        status=WorkflowExecutionStatus.RUNNING,
+        current_stage=WorkflowStage.EMAIL_PARSED,
+        retry_count=0,
+        retry_exhausted=False,
+        failure_stage=None,
+        error_type=None,
+        error_message=None,
+        failed_at=None,
+        parent_execution_id=None,
+        attempt_number=1,
+        execution_metadata=None,
+    )
 
     result = context.service.process_email(
         email,
         workflow_execution=workflow_execution,
     )
 
-    context.workflow_execution_service.start_execution.assert_not_called()
-    context.workflow_execution_service.advance_stage.assert_any_call(
-        workflow_execution,
-        stage=WorkflowStage.AI_ANALYSIS_STARTED,
+    (
+        context.workflow_execution_service
+        .start_execution
+        .assert_not_called()
     )
-    context.workflow_execution_service.attach_ticket.assert_called_once()
+
+    (
+        context.workflow_execution_service
+        .advance_stage
+        .assert_any_call(
+            workflow_execution,
+            stage=WorkflowStage.AI_ANALYSIS_STARTED,
+        )
+    )
+
+    (
+        context.workflow_execution_service
+        .attach_ticket
+        .assert_called_once()
+    )
+
     assert result.execution_id == "execution-123"
 
 
 def test_process_email_rejects_mismatched_execution_message_id():
     context = build_service()
     email = build_email()
+
     workflow_execution = MagicMock()
     workflow_execution.message_id = "<different@example.com>"
 
-    with pytest.raises(ValueError, match="message_id does not match"):
+    with pytest.raises(
+        ValueError,
+        match="message_id does not match",
+    ):
         context.service.process_email(
             email,
             workflow_execution=workflow_execution,
         )
 
-    context.workflow_execution_service.start_execution.assert_not_called()
+    (
+        context.workflow_execution_service
+        .start_execution
+        .assert_not_called()
+    )
 
 
 @pytest.mark.parametrize(
@@ -459,25 +567,32 @@ def test_process_email_rejects_mismatched_execution_message_id():
         ("normalizer", "normalize"),
         ("priority_service", "assign_priority"),
         ("routing_service", "route_ticket"),
-        ("reply_suggestion_service", "generate_suggestion"),
+        (
+            "reply_suggestion_service",
+            "generate_suggestion",
+        ),
         ("ticket_service", "create_ticket"),
     ],
 )
-
-
 def test_downstream_failure_rolls_back(
     dependency_name,
     method_name,
 ):
     context = build_service()
 
-    dependency = getattr(context, dependency_name)
+    dependency = getattr(
+        context,
+        dependency_name,
+    )
 
     original_error = RuntimeError(
         f"{dependency_name} failure"
     )
 
-    getattr(dependency, method_name).side_effect = original_error
+    getattr(
+        dependency,
+        method_name,
+    ).side_effect = original_error
 
     with pytest.raises(RuntimeError) as exc_info:
         context.service.process_email(build_email())
@@ -491,8 +606,10 @@ def test_downstream_failure_rolls_back(
 def test_failed_workflow_does_not_commit():
     context = build_service()
 
-    context.ticket_service.create_ticket.side_effect = RuntimeError(
-        "ticket creation failed"
+    context.ticket_service.create_ticket.side_effect = (
+        RuntimeError(
+            "ticket creation failed"
+        )
     )
 
     with pytest.raises(RuntimeError):
@@ -515,7 +632,9 @@ def test_workflow_preserves_original_typed_exception():
         original_error
     )
 
-    with pytest.raises(TypedApplicationError) as exc_info:
+    with pytest.raises(
+        TypedApplicationError
+    ) as exc_info:
         context.service.process_email(build_email())
 
     assert exc_info.value is original_error
@@ -551,7 +670,10 @@ def test_process_email_executes_complete_pipeline_in_order():
         "route_ticket",
     )
     manager.attach_mock(
-        context.reply_suggestion_service.generate_suggestion,
+        (
+            context.reply_suggestion_service
+            .generate_suggestion
+        ),
         "generate_suggestion",
     )
     manager.attach_mock(
@@ -588,7 +710,12 @@ def test_process_email_does_not_complete_workflow_execution():
 
     context.service.process_email(build_email())
 
-    context.workflow_execution_service.complete_execution.assert_not_called()
+    (
+        context.workflow_execution_service
+        .complete_execution
+        .assert_not_called()
+    )
+
 
 def test_execution_start_failure_propagates_without_business_rollback():
     context = build_service()
@@ -597,7 +724,9 @@ def test_execution_start_failure_propagates_without_business_rollback():
         "workflow execution persistence failure"
     )
 
-    context.workflow_repository.add.side_effect = original_error
+    context.workflow_repository.add.side_effect = (
+        original_error
+    )
 
     with pytest.raises(RuntimeError) as exc_info:
         context.service.process_email(build_email())

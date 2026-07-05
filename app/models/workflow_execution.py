@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -26,6 +27,10 @@ class WorkflowExecution(Base):
             unique=True,
         ),
         Index(
+            "ix_workflow_executions_message_id",
+            "message_id",
+        ),
+        Index(
             "ix_workflow_executions_status",
             "status",
         ),
@@ -48,7 +53,6 @@ class WorkflowExecution(Base):
 
     message_id: Mapped[str] = mapped_column(
         String(500),
-        unique=True,
         nullable=False,
     )
 
@@ -108,6 +112,35 @@ class WorkflowExecution(Base):
     error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+
+    retry_exhausted: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
+
+    failed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    parent_execution_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey(
+            "workflow_executions.id",
+            name="fk_workflow_execution_parent",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
+
+    attempt_number: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
     )
 
     execution_metadata: Mapped[dict | None] = mapped_column(

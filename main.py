@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api.dashboard_routes import router as dashboard_router
+from app.api.failure_recovery_routes import router as failure_recovery_router
 from app.api.manual_review_routes import router as manual_review_router
 from app.api.monitoring_routes import router as monitoring_router
 from app.core.logging import configure_logging
@@ -16,6 +17,7 @@ app = FastAPI(
 
 app.include_router(manual_review_router)
 app.include_router(monitoring_router)
+app.include_router(failure_recovery_router)
 
 app.mount(
     "/static",

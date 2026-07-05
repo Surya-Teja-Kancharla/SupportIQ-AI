@@ -271,3 +271,28 @@ class InvalidTicketTransitionError(Exception):
             f"Invalid ticket transition: "
             f"{current_status} -> {target_status}"
         )
+
+class WorkflowFailure(Exception):
+    """
+    Represents a workflow-stage failure with recovery metadata.
+
+    This exception is raised by the workflow orchestration layer after
+    classifying an underlying application exception.
+    """
+
+    def __init__(
+        self,
+        *,
+        stage: str,
+        exception_type: str,
+        sanitized_message: str,
+        retry_count: int = 0,
+        retry_exhausted: bool = False,
+    ) -> None:
+        super().__init__(sanitized_message)
+
+        self.stage = stage
+        self.exception_type = exception_type
+        self.sanitized_message = sanitized_message
+        self.retry_count = retry_count
+        self.retry_exhausted = retry_exhausted

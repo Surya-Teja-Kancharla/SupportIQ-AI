@@ -7,6 +7,7 @@ class ProcessingStatus(StrEnum):
     FAILED = "failed"
     SKIPPED = "skipped"
 
+
 class WorkflowExecutionStatus(StrEnum):
     RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
@@ -24,6 +25,12 @@ class WorkflowStage(StrEnum):
     TICKET_CREATED = "TICKET_CREATED"
     ACKNOWLEDGEMENT_SENT = "ACKNOWLEDGEMENT_SENT"
     WORKFLOW_COMPLETED = "WORKFLOW_COMPLETED"
+
+
+class DeadLetterStatus(StrEnum):
+    OPEN = "OPEN"
+    RETRYING = "RETRYING"
+    RESOLVED = "RESOLVED"
 
 
 class FailureType(StrEnum):
@@ -75,6 +82,7 @@ class LogEvent(StrEnum):
     HEALTH_CHECK_SUCCEEDED = "health_check_succeeded"
     HEALTH_CHECK_FAILED = "health_check_failed"
     METRICS_REQUESTED = "metrics_requested"
+
 
 class TicketStatus:
     OPEN = "OPEN"

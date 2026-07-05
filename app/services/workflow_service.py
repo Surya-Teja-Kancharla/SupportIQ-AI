@@ -65,24 +65,32 @@ class WorkflowService:
         self._monitoring_session: Session | None = None
 
         if workflow_execution_service is not None:
-            self._workflow_execution_service = workflow_execution_service
+            self._workflow_execution_service = (
+                workflow_execution_service
+            )
 
         elif workflow_execution_repository is not None:
-            self._workflow_execution_service = WorkflowExecutionService(
-                workflow_execution_repository,
+            self._workflow_execution_service = (
+                WorkflowExecutionService(
+                    workflow_execution_repository,
+                )
             )
 
         else:
             self._monitoring_session = create_session()
             self._owns_monitoring_session = True
 
-            monitoring_repository = WorkflowExecutionRepository(
-                self._monitoring_session
+            monitoring_repository = (
+                WorkflowExecutionRepository(
+                    self._monitoring_session
+                )
             )
 
-            self._workflow_execution_service = WorkflowExecutionService(
-                monitoring_repository,
-                session=self._monitoring_session,
+            self._workflow_execution_service = (
+                WorkflowExecutionService(
+                    monitoring_repository,
+                    session=self._monitoring_session,
+                )
             )
 
     def close(self) -> None:
@@ -122,7 +130,9 @@ class WorkflowService:
         if workflow_execution is None:
             existing_execution = (
                 self._workflow_execution_service
-                .get_by_message_id(email.message_id)
+                .get_by_message_id(
+                    email.message_id
+                )
             )
 
             if existing_execution is not None:
@@ -132,7 +142,8 @@ class WorkflowService:
                 )
 
             workflow_execution = (
-                self._workflow_execution_service.start_execution(
+                self._workflow_execution_service
+                .start_execution(
                     message_id=email.message_id,
                     stage=WorkflowStage.EMAIL_PARSED,
                 )
@@ -144,21 +155,41 @@ class WorkflowService:
                 "the parsed email message_id."
             )
 
+        current_stage = str(
+            workflow_execution.current_stage
+        )
+
+        retry_count = workflow_execution.retry_count
+
+        retry_exhausted = workflow_execution.retry_exhausted
+
         try:
+            current_stage = str(
+                WorkflowStage.AI_ANALYSIS_STARTED
+            )
+
             self._workflow_execution_service.advance_stage(
                 workflow_execution,
                 stage=WorkflowStage.AI_ANALYSIS_STARTED,
             )
 
-            analysis_request = self._build_analysis_request(email)
+            analysis_request = self._build_analysis_request(
+                email
+            )
 
-            ticket_analysis = self._llm_service.analyze_ticket(
-                analysis_request
+            ticket_analysis = (
+                self._llm_service.analyze_ticket(
+                    analysis_request
+                )
             )
 
             self._workflow_execution_service.advance_stage(
                 workflow_execution,
                 stage=WorkflowStage.AI_ANALYSIS_COMPLETED,
+            )
+
+            current_stage = str(
+                WorkflowStage.VALIDATION_COMPLETED
             )
 
             normalized_analysis = (
@@ -172,8 +203,14 @@ class WorkflowService:
                 stage=WorkflowStage.VALIDATION_COMPLETED,
             )
 
-            priority_decision = self._priority_service.assign_priority(
-                normalized_analysis
+            current_stage = str(
+                WorkflowStage.PRIORITY_ASSIGNED
+            )
+
+            priority_decision = (
+                self._priority_service.assign_priority(
+                    normalized_analysis
+                )
             )
 
             self._workflow_execution_service.advance_stage(
@@ -181,8 +218,14 @@ class WorkflowService:
                 stage=WorkflowStage.PRIORITY_ASSIGNED,
             )
 
-            routing_decision = self._routing_service.route_ticket(
-                normalized_analysis
+            current_stage = str(
+                WorkflowStage.TEAM_ASSIGNED
+            )
+
+            routing_decision = (
+                self._routing_service.route_ticket(
+                    normalized_analysis
+                )
             )
 
             self._workflow_execution_service.advance_stage(
@@ -190,34 +233,51 @@ class WorkflowService:
                 stage=WorkflowStage.TEAM_ASSIGNED,
             )
 
+            current_stage = "REPLY_SUGGESTION"
+
             reply_suggestion = (
-                self._reply_suggestion_service.generate_suggestion(
+                self._reply_suggestion_service
+                .generate_suggestion(
                     email=email,
                     analysis=normalized_analysis,
                 )
             )
 
-            ticket_creation_result = self._ticket_service.create_ticket(
-                email=email,
-                analysis=normalized_analysis,
-                priority_decision=priority_decision,
-                routing_decision=routing_decision,
-                reply_suggestion=reply_suggestion,
+            current_stage = str(
+                WorkflowStage.TICKET_CREATED
+            )
+
+            ticket_creation_result = (
+                self._ticket_service.create_ticket(
+                    email=email,
+                    analysis=normalized_analysis,
+                    priority_decision=priority_decision,
+                    routing_decision=routing_decision,
+                    reply_suggestion=reply_suggestion,
+                )
             )
 
             self._session.commit()
 
             self._workflow_execution_service.attach_ticket(
                 workflow_execution,
-                ticket_id=ticket_creation_result.ticket_id,
+                ticket_id=(
+                    ticket_creation_result.ticket_id
+                ),
             )
 
             processed_at = datetime.now(timezone.utc)
 
             return TicketProcessingResult(
-                ticket_id=ticket_creation_result.ticket_id,
-                ticket_number=ticket_creation_result.ticket_number,
-                execution_id=workflow_execution.execution_id,
+                ticket_id=(
+                    ticket_creation_result.ticket_id
+                ),
+                ticket_number=(
+                    ticket_creation_result.ticket_number
+                ),
+                execution_id=(
+                    workflow_execution.execution_id
+                ),
                 message_id=email.message_id,
                 analysis=normalized_analysis,
                 priority_decision=priority_decision,
@@ -231,8 +291,11 @@ class WorkflowService:
 
             try:
                 self._workflow_execution_service.fail_execution(
-                    workflow_execution,
-                    error=exc,
+                    execution=workflow_execution,
+                    stage=current_stage,
+                    exc=exc,
+                    retry_count=retry_count,
+                    retry_exhausted=retry_exhausted,
                 )
 
             except Exception:
@@ -243,14 +306,20 @@ class WorkflowService:
                             workflow_execution.execution_id
                         ),
                         "message_id": email.message_id,
+                        "failed_stage": current_stage,
                     },
                 )
 
             raise
 
     @staticmethod
-    def _validate_message_id(email: ParsedEmail) -> None:
-        if not email.message_id or not email.message_id.strip():
+    def _validate_message_id(
+        email: ParsedEmail,
+    ) -> None:
+        if (
+            not email.message_id
+            or not email.message_id.strip()
+        ):
             raise ValueError(
                 "Parsed email Message-ID must not be empty."
             )

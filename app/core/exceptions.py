@@ -227,3 +227,18 @@ class RoutingConfigurationError(RoutingError):
 
 class UnmappedCategoryError(RoutingError):
     """Raised when no routing rule exists for a ticket category."""
+
+class PersistenceError(SupportIQError):
+    """Base exception for persistence-layer failures."""
+
+
+class RepositoryError(PersistenceError):
+    """Raised when a repository operation fails."""
+
+
+class DuplicateTicketError(RepositoryError):
+    """Raised when a ticket violates a uniqueness constraint."""
+
+
+class DuplicateWorkflowExecutionError(RepositoryError):
+    """Raised when a workflow execution already exists for a message."""

@@ -24,7 +24,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * Provider-independent AI capabilities
 * Deterministic normalization boundaries
 
-> **Current Development Status:** Hours 1–7 completed, including the Hour 6.5 optional bonus feature — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text and ticket-analysis normalization, immutable normalized ticket-analysis contracts, AI-generated support-agent reply suggestions, versioned reply-suggestion prompts, provider-independent reply-generation contracts, deterministic priority assignment, configurable business priority rules, AI recommendation and business-rule reconciliation, priority escalation without deterministic downgrading, priority-decision traceability, configurable category-to-team routing, routing-decision traceability, configuration validation, unknown-category rejection, immutable downstream decision processing, and 173 passing automated tests.
+> **Current Development Status:** Hours 1–8 completed, including the Hour 6.5 optional bonus feature — project foundation, PostgreSQL schema and Alembic migration infrastructure, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundaries, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text and ticket-analysis normalization, immutable normalized ticket-analysis contracts, AI-generated support-agent reply suggestions, deterministic priority assignment, configurable category-to-team routing, SQLAlchemy ORM models, centralized database session infrastructure, Alembic-managed schema evolution, repository abstractions for tickets, attachments, audit logs, and workflow executions, repository-level exception translation, explicit transaction ownership boundaries, Message-ID-based workflow execution lookup for future idempotency orchestration, 100% focused repository-layer coverage, and 203 passing automated tests with zero regressions.
 
 ---
 
@@ -593,9 +593,59 @@ Completed:
 * Verified the complete 173-test application regression suite.
 * Completed Hour 7 with zero automated test failures and zero regressions.
 
+### Hour 8 — Completed
+
+* SQLAlchemy declarative base infrastructure.
+* Centralized database engine and session infrastructure.
+* SQLAlchemy ORM ticket model.
+* SQLAlchemy ORM ticket-attachment model.
+* SQLAlchemy ORM ticket-audit-log model.
+* SQLAlchemy ORM workflow-execution model.
+* Alembic migration infrastructure.
+* Baseline existing-schema migration.
+* Workflow-executions table migration.
+* Ticket-index restoration migration.
+* Dedicated repository package.
+* Ticket repository.
+* Attachment repository.
+* Audit repository.
+* Workflow-execution repository.
+* Ticket persistence and lookup operations.
+* Attachment persistence and lookup operations.
+* Audit-event persistence and lookup operations.
+* Workflow-execution persistence and Message-ID lookup.
+* Duplicate Message-ID rejection.
+* SQLAlchemy exception translation.
+* Integrity-error translation.
+* Explicit caller-owned transaction boundaries.
+* Repository non-commit behavior.
+* 30 focused repository tests.
+* 100% focused repository-package coverage.
+* 98 repository statements covered with zero misses.
+* 203-test full regression verification.
+* Zero automated test failures and zero regressions.
+
+### Hour 9 — Planned
+
+* End-to-end ticket-processing workflow orchestration.
+* Transaction coordination across repositories.
+* Ticket creation persistence integration.
+* Attachment persistence integration.
+* Tag persistence integration.
+* Audit-log persistence integration.
+* Workflow-execution persistence integration.
+* Message-ID-based idempotency enforcement.
+* Duplicate email processing prevention.
+* Rollback behavior for partial workflow failures.
+* Acknowledgement orchestration after successful persistence.
+* Email processed-state update after the complete success boundary.
+* Workflow integration tests.
+* PostgreSQL-backed persistence integration tests.
+
+
 ### Automated Testing Status
 
-173 tests passed
+203 tests passed
 1 third-party dependency deprecation warning
 0 test failures
 0 regressions
@@ -618,9 +668,19 @@ Focused Hour 7 coverage:
 96% priority-service coverage
 100% routing-service coverage
 
+Focused Hour 8 repository suite:
+
+30 tests passed
+
+Focused Hour 8 repository coverage:
+
+100% total repository-package coverage
+98 statements covered
+0 statements missed
+
 Full application regression suite:
 
-173 tests passed
+203 tests passed
 
 The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
 
@@ -1264,6 +1324,30 @@ The routing service does not mutate the normalized ticket analysis.
 
 ---
 
+### SQLAlchemy Persistence and Repository Architecture
+
+SupportIQ AI includes a dedicated repository layer that isolates application workflow logic from SQLAlchemy persistence operations.
+
+The current persistence boundary is:
+
+```text
+Application / Workflow Services
+        │
+        ▼
+Repository Layer
+        │
+        ├── TicketRepository
+        ├── AttachmentRepository
+        ├── AuditRepository
+        └── WorkflowExecutionRepository
+        │
+        ▼
+SQLAlchemy Session
+        │
+        ▼
+PostgreSQL
+```
+
 ## Technology Stack
 
 ### Backend
@@ -1464,12 +1548,19 @@ SupportIQ-AI/
 │   │   ├── logging.py
 │   │   └── retry.py
 │   ├── database/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── session.py
 │   │   └── schema.sql
 │   ├── evaluation/
 │   │   ├── __init__.py
 │   │   ├── metrics.py
 │   │   └── runner.py
 │   ├── models/
+│   │   ├── ticket_attachment.py
+│   │   ├── ticket_audit_log.py
+│   │   ├── ticket.py
+│   │   ├── workflow_execution.py
 │   │   └── __init__.py
 │   ├── prompts/
 │   │   ├── __init__.py
@@ -1478,6 +1569,12 @@ SupportIQ-AI/
 │   │   └── ticket_analysis_v1.py
 │   ├── scheduler/
 │   │   └── __init__.py
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   ├── ticket_attachment.py
+│   │   ├── ticket_audit_log.py
+│   │   ├── ticket.py
+│   │   └── workflow_execution.py
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── email_schema.py
@@ -1516,6 +1613,7 @@ SupportIQ-AI/
 │   └── ai_evaluation_dataset.json
 ├── tests/
 │   ├── __init__.py
+│   ├── confest.py
 │   ├── manual_run_ai_evaluation.py
 │   ├── manual_test_groq.py
 │   ├── manual_test_imap.py
@@ -1536,7 +1634,11 @@ SupportIQ-AI/
 │   ├── test_priority_service.py
 │   ├── test_reply_suggestion_service.py
 │   ├── test_routing_service.py
-│   └── test_ticket_analysis_schema.py
+│   ├── test_ticket_analysis_schema.py
+│   ├── test_attachment_repository.py
+│   ├── test_audit_repository.py
+│   ├── test_ticket_repository.py
+│   └── test_workflow_execution_repository.py
 ├── uploads/
 │   ├── attachments/
 │   └── emails/
@@ -2778,7 +2880,7 @@ python -m pytest -v
 Current result:
 
 ```text
-173 passed
+203 passed
 1 warning
 0 failures
 ```
@@ -2797,11 +2899,21 @@ Current result:
 
 Run the focused Hour 6.5 reply-suggestion tests:
 
+```bash
 python -m pytest tests/test_reply_suggestion_schema.py tests/test_reply_suggestion_service.py tests/test_groq_llm_service.py -v
+```
 
 Run the focused Hour 7 priority and routing tests:
 
+```bash
 python -m pytest tests/test_priority_service.py tests/test_routing_service.py -v
+```
+
+Run the focused Hour 8 repository tests:
+
+```bash
+python -m pytest tests/test_ticket_repository.py tests/test_attachment_repository.py tests/test_audit_repository.py tests/test_workflow_execution_repository.py -v
+```
 
 The complete automated suite verifies:
 
@@ -2852,6 +2964,21 @@ The complete automated suite verifies:
 * Routing configuration validation.
 * Unsupported-category rejection.
 * Priority and routing input immutability.
+* SQLAlchemy ticket persistence.
+* Ticket lookup by ID.
+* Ticket lookup by ticket number.
+* Attachment metadata persistence.
+* Attachment lookup by ticket ID.
+* Attachment query-order preservation.
+* Audit-event persistence.
+* Audit-event lookup by ticket ID.
+* Workflow-execution persistence.
+* Workflow-execution lookup by Message-ID.
+* Duplicate Message-ID rejection.
+* Repository exception translation.
+* Integrity-error translation.
+* Explicit caller-owned transaction boundaries.
+* Repository non-commit behavior.
 
 Automated tests do not consume Groq API quota.
 
@@ -2867,18 +2994,19 @@ Generate focused Hour 7 service coverage:
 
 python -m pytest tests/test_priority_service.py tests/test_routing_service.py --cov=app.services.priority_service --cov=app.services.routing_service --cov-report=term-missing
 
-Focused Hour 7 coverage result:
-
-Name                               Stmts   Miss  Cover
-----------------------------------------------------------------
-app/services/priority_service.py      53      2    96%
-app/services/routing_service.py       23      0   100%
-----------------------------------------------------------------
-TOTAL                                 76      2    97%
+Name                                                Stmts   Miss  Cover
+---------------------------------------------------------------------------------
+app/repositories/__init__.py                            5      0   100%
+app/repositories/attachment_repository.py              21      0   100%
+app/repositories/audit_repository.py                   21      0   100%
+app/repositories/ticket_repository.py                  28      0   100%
+app/repositories/workflow_execution_repository.py      23      0   100%
+---------------------------------------------------------------------------------
+TOTAL                                                  98      0   100%
 
 Current regression status:
 
-173 passed
+203 passed
 1 warning
 0 failures
 
@@ -2980,8 +3108,6 @@ At the end of Hour 7:
 * Standard, ambiguous, and adversarial cases require future prompt or business-rule improvements.
 * Only `ticket-analysis-v1` has been evaluated.
 * Prompt-version comparison has not yet been performed.
-* SQLAlchemy persistence is not implemented.
-* Repository layer is not implemented.
 * Ticket creation is not implemented.
 * Automatic acknowledgement orchestration is not implemented.
 * Inbox polling scheduler is not implemented.
@@ -2991,7 +3117,6 @@ At the end of Hour 7:
 * Ticket REST APIs are not implemented.
 * Manual agent review is not implemented.
 * Ticket lifecycle transitions are not implemented.
-* Audit-log persistence is not implemented.
 * Support dashboard is not implemented.
 * Automated IMAP transport unit tests are not yet implemented.
 * Sensitive-data redaction filters are not yet implemented.
@@ -2999,6 +3124,12 @@ At the end of Hour 7:
 * Reply-suggestion quality does not yet have a dedicated evaluation framework.
 * Suggested replies are not yet persisted in PostgreSQL.
 * No agent approval/edit/reject workflow is implemented yet.
+* Repository persistence operations are implemented, but they are not yet integrated into the complete ticket-processing orchestration workflow.
+* Caller-owned transaction boundaries are established at the repository layer, but the end-to-end workflow transaction coordinator is not yet implemented.
+* Workflow-execution Message-ID lookup is implemented as the persistence foundation for idempotency, but duplicate-email prevention is not yet integrated into the complete processing workflow.
+* Ticket, attachment, and audit-log repositories are implemented, but ticket creation orchestration has not yet been connected to them.
+* Tag persistence and internal-note persistence repositories are not yet implemented.
+* Database integration tests against a real PostgreSQL test database are not yet implemented.
 
 ---
 
@@ -3051,6 +3182,13 @@ At the end of Hour 7:
 * Explicit routing configuration validation.
 * Explicit rejection of unsupported routing categories.
 * Immutable priority and routing decision processing.
+* SQLAlchemy-based persistence abstraction.
+* Repository-level SQLAlchemy exception translation.
+* Repository-level integrity-error translation.
+* Explicit caller-owned transaction boundaries.
+* Prevention of implicit repository commits.
+* Unique Message-ID persistence support for future idempotent workflow processing.
+* Alembic-managed database schema evolution.
 
 ### Planned
 
@@ -3569,6 +3707,44 @@ Silently routing unsupported categories to a default team can hide prompt regres
 
 SupportIQ AI raises an explicit `UnmappedCategoryError` so unsupported classifications remain observable and can later enter a manual-review or failure-handling workflow.
 
+### Why Use a Repository Layer?
+
+Application workflow logic should not depend directly on SQLAlchemy query construction or persistence exceptions.
+
+The repository layer provides:
+
+* A stable persistence abstraction.
+* Reduced ORM coupling.
+* Centralized query behavior.
+* Application-specific exception translation.
+* Easier unit testing.
+* Explicit transaction ownership.
+
+### Why Do Repositories Not Commit Transactions?
+
+A complete ticket-processing workflow may persist a ticket, attachments, tags, audit events, and workflow-execution state as one atomic operation.
+
+If individual repositories commit independently, partial workflow state can become permanent before the complete workflow succeeds.
+
+SupportIQ AI therefore uses caller-owned transaction boundaries:
+
+```text
+Workflow Service
+      │
+      ▼
+Begin Transaction
+      │
+      ├── TicketRepository
+      ├── AttachmentRepository
+      ├── AuditRepository
+      └── WorkflowExecutionRepository
+      │
+      ▼
+Complete Workflow Successfully?
+      │
+      ├── Yes → Commit
+      └── No  → Roll Back
+```      
 ---
 
 ## Development Roadmap

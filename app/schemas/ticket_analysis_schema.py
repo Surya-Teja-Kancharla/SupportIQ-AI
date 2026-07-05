@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.schemas.email_schema import ParsedEmail
 
@@ -33,6 +33,9 @@ class TicketAnalysisResponse(BaseModel):
 
     suggested_department: str = Field(min_length=1, max_length=100)
 
-    suggested_tags: list[str] = Field(default_factory=list)
+    suggested_tags: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("suggested_tags", "tags"),
+    )
 
     confidence_score: float = Field(ge=0.0, le=1.0)

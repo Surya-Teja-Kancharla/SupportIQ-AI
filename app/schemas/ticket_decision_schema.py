@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 FinalPriority = Literal[
@@ -47,10 +47,15 @@ class RoutingDecision(BaseModel):
         max_length=100,
     )
 
-    routing_rule: str = Field(
+    applied_rule: str = Field(
+        validation_alias=AliasChoices("applied_rule", "routing_rule"),
         min_length=1,
         max_length=200,
     )
+
+    @property
+    def routing_rule(self) -> str:
+        return self.applied_rule
 
 
 class TicketDecisionResult(BaseModel):

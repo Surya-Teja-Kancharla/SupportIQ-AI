@@ -242,3 +242,18 @@ class DuplicateTicketError(RepositoryError):
 
 class DuplicateWorkflowExecutionError(RepositoryError):
     """Raised when a workflow execution already exists for a message."""
+
+    
+class TicketServiceError(SupportIQError):
+    """Raised when ticket creation orchestration fails."""
+
+class WorkflowError(SupportIQError):
+    """Base exception for ticket-processing workflow failures."""
+
+
+class DuplicateWorkflowError(WorkflowError):
+    """Raised when an email Message-ID has already been processed."""
+
+
+class WorkflowPersistenceError(WorkflowError):
+    """Raised when workflow persistence fails."""

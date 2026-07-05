@@ -22,7 +22,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * Auditability
 * Security and data privacy
 
-> **Current Development Status:** Hours 1–5 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, and 68 passing automated tests.
+> **Current Development Status:** Hours 1–6 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text normalization, Unicode normalization, canonical classification normalization, tag normalization and deduplication, confidence normalization, immutable normalized ticket-analysis contracts, normalization metadata, and 105 passing automated tests.
 
 ---
 
@@ -41,6 +41,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * [Email Ingestion Orchestration](#email-ingestion-orchestration)
 * [AI Analysis Architecture](#ai-analysis-architecture)
 * [AI Evaluation Architecture](#ai-evaluation-architecture)
+* [Ticket Analysis Normalization Architecture](#ticket-analysis-normalization-architecture)
 * [Prompt Engineering and Documentation](#prompt-engineering-and-documentation)
 * [SMTP Transport](#smtp-transport)
 * [Exception Architecture](#exception-architecture)
@@ -151,7 +152,18 @@ LLM Ticket Analysis
 Structured JSON Validation
       │
       ▼
-Category Normalization
+Ticket Analysis Normalization
+      │
+      ├── Unicode NFKC Normalization
+      ├── Whitespace Normalization
+      ├── Optional Text Normalization
+      ├── Category Canonicalization
+      ├── AI Priority Canonicalization
+      ├── Sentiment Canonicalization
+      ├── Department Canonicalization
+      ├── Tag Normalization and Deduplication
+      ├── Confidence Precision Normalization
+      └── Normalization Metadata
       │
       ▼
 Priority Assignment Engine
@@ -406,26 +418,69 @@ Completed:
 * Identification of classification and confidence-calibration limitations.
 * Final full regression verification.
 
+### Hour 6 — JSON Validation and Ticket Analysis Normalization Layer
+
+Completed:
+
+* Added a dedicated normalization boundary between validated AI output and downstream business logic.
+* Added reusable text-normalization utilities.
+* Added Unicode NFKC normalization.
+* Added deterministic whitespace normalization.
+* Added normalization of required textual fields.
+* Added normalization of optional textual fields.
+* Added conversion of empty optional values to `None`.
+* Added provider-independent label normalization.
+* Added case-insensitive label matching.
+* Added separator normalization for spaces, underscores, and hyphens.
+* Added canonical category normalization.
+* Added category alias mappings.
+* Added canonical AI-recommended priority normalization.
+* Added priority alias mappings.
+* Added canonical sentiment normalization.
+* Added sentiment alias mappings.
+* Added canonical suggested-department normalization.
+* Added department alias mappings.
+* Added preservation of unsupported normalized labels instead of silently mapping them to fallback classifications.
+* Added deterministic tag normalization.
+* Added lowercase tag canonicalization.
+* Added slug-style tag formatting.
+* Added special-character normalization for tags.
+* Added empty-tag removal.
+* Added duplicate-tag removal.
+* Added preservation of first-seen tag ordering.
+* Added duplicate-tag and empty-tag counters.
+* Added deterministic confidence-score precision normalization.
+* Added defensive confidence clamping support.
+* Added explicit separation between AI-recommended priority and future final business priority.
+* Added immutable `NormalizedTicketAnalysis` contract.
+* Added immutable `NormalizationMetadata` contract.
+* Added preservation of original classification labels in normalization metadata.
+* Added metadata flags indicating which classification fields were normalized.
+* Added normalization metadata for removed duplicate and empty tags.
+* Added confidence-clamping metadata.
+* Added strict rejection of unexpected normalized schema fields.
+* Verified that normalization does not mutate the original `TicketAnalysisResponse`.
+* Added 14 text-normalization unit tests.
+* Added 23 ticket-analysis-normalization unit tests.
+* Verified 37 focused Hour 6 tests.
+* Verified the complete 105-test application regression suite.
+* Completed Hour 6 with zero test failures and zero regressions.
+
 ### Automated Testing Status
 
 ```text
-68 tests passed
+105 tests passed
 1 third-party dependency deprecation warning
 0 test failures
 0 regressions
-```
 
-Focused Hour 5 evaluation suite:
+Focused Hour 6 normalization suite:
 
-```text
-10 tests passed
-```
+37 tests passed
 
 Full application regression suite:
 
-```text
-68 tests passed
-```
+105 tests passed
 
 The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
 
@@ -645,6 +700,8 @@ Pydantic schemas currently represent:
 * Batch ingestion results.
 * Ticket-analysis requests.
 * Ticket-analysis responses.
+* Normalized ticket analyses.
+* Normalization metadata.
 
 These models establish validated contracts between application layers.
 
@@ -769,6 +826,110 @@ The evaluation framework separates:
 
 This allows prompt versions and future model configurations to be evaluated reproducibly.
 
+### Ticket Analysis Normalization Layer
+
+SupportIQ AI includes a dedicated normalization boundary between validated LLM output and deterministic downstream business logic.
+
+The normalization pipeline operates as follows:
+
+```text
+TicketAnalysisResponse
+        │
+        ▼
+Text Normalization
+        │
+        ├── Unicode NFKC Normalization
+        ├── Whitespace Normalization
+        └── Optional Text Normalization
+        │
+        ▼
+Classification Canonicalization
+        │
+        ├── Category
+        ├── AI-Recommended Priority
+        ├── Sentiment
+        └── Suggested Department
+        │
+        ▼
+Tag Normalization
+        │
+        ├── Lowercase Canonicalization
+        ├── Slug Formatting
+        ├── Empty-Tag Removal
+        ├── Duplicate Removal
+        └── First-Seen Order Preservation
+        │
+        ▼
+Confidence Normalization
+        │
+        ├── Defensive Range Clamping
+        └── Deterministic Precision
+        │
+        ▼
+Normalization Metadata
+        │
+        ├── Original Classification Labels
+        ├── Classification Change Flags
+        ├── Removed Duplicate Tags
+        ├── Removed Empty Tags
+        └── Confidence Clamp Indicator
+        │
+        ▼
+NormalizedTicketAnalysis
+```
+
+The normalization service accepts only a validated `TicketAnalysisResponse` and produces an immutable `NormalizedTicketAnalysis`.
+
+This creates an explicit trust boundary:
+
+```text
+Untrusted Provider Output
+        │
+        ▼
+JSON Extraction
+        │
+        ▼
+Strict AI Schema Validation
+        │
+        ▼
+Validated TicketAnalysisResponse
+        │
+        ▼
+Deterministic Normalization
+        │
+        ▼
+Immutable NormalizedTicketAnalysis
+        │
+        ▼
+Priority Assignment and Routing
+```
+
+The normalization layer does not:
+
+* Call an LLM provider.
+* Assign final business priority.
+* Route tickets.
+* Persist ticket data.
+* Send acknowledgement emails.
+
+These responsibilities remain isolated in downstream services.
+
+Unknown classifications are preserved in normalized textual form instead of being silently mapped to fallback values. This keeps unsupported AI classifications observable for downstream validation, monitoring, and failure handling.
+
+The AI-generated priority is stored as `ai_recommended_priority` rather than the final ticket priority.
+
+This preserves the architectural boundary between:
+
+```text
+LLM Recommendation
+        │
+        ▼
+Deterministic Normalization
+        │
+        ▼
+Business Priority Assignment
+```
+
 ---
 
 ## Technology Stack
@@ -799,6 +960,19 @@ This allows prompt versions and future model configurations to be evaluated repr
 * Case-type metrics
 * Confidence analysis
 * JSON report generation
+
+### Validation and Normalization
+
+* Pydantic structured contracts
+* Unicode NFKC normalization
+* Deterministic whitespace normalization
+* Canonical classification mappings
+* Immutable alias maps
+* Tag slug normalization
+* Stable tag deduplication
+* Confidence precision normalization
+* Immutable normalized domain contracts
+* Normalization metadata
 
 ### Database
 
@@ -873,7 +1047,8 @@ Domain Services
         ├── Email Parsing
         ├── Attachment Processing
         ├── LLM Analysis
-        ├── Validation
+        ├── AI Response Validation
+        ├── Ticket Analysis Normalization
         ├── Priority Assignment
         ├── Routing
         └── Acknowledgement Generation
@@ -903,13 +1078,22 @@ For example:
 Groq API
     │
     ▼
-Groq Client
+GroqLLMService
     │
     ▼
-LLM Service Boundary
+LLMService
     │
     ▼
-Ticket Analysis Workflow
+TicketAnalysisResponse
+    │
+    ▼
+TicketAnalysisNormalizer
+    │
+    ▼
+NormalizedTicketAnalysis
+    │
+    ▼
+Priority Assignment Engine
 ```
 
 The application depends on an `LLMService` abstraction rather than coupling the complete workflow directly to Groq.
@@ -941,8 +1125,7 @@ SupportIQ-AI/
 │   ├── evaluation/
 │   │   ├── __init__.py
 │   │   ├── metrics.py
-│   │   ├── runner.py
-│   │   └── schemas.py
+│   │   └── runner.py
 │   ├── models/
 │   │   └── __init__.py
 │   ├── prompts/
@@ -954,7 +1137,9 @@ SupportIQ-AI/
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── email_schema.py
+│   │   ├── evaluation_schema.py
 │   │   ├── ingestion_schema.py
+│   │   ├── normalized_ticket_schema.py
 │   │   ├── smtp_schema.py
 │   │   └── ticket_analysis_schema.py
 │   ├── services/
@@ -965,10 +1150,12 @@ SupportIQ-AI/
 │   │   ├── groq_llm_service.py
 │   │   ├── imap_service.py
 │   │   ├── llm_service.py
-│   │   └── smtp_service.py
+│   │   ├── smtp_service.py
+│   │   └── ticket_analysis_normalizer.py
 │   └── utils/
 │       ├── __init__.py
-│       └── json_extractor.py
+│       ├── json_extractor.py
+│       └── text_normalizer.py
 ├── docs/
 │   ├── ai_evaluation_report.json
 │   └── prompts.md
@@ -993,6 +1180,8 @@ SupportIQ-AI/
 │   ├── test_json_extractor.py
 │   ├── test_retry.py
 │   ├── test_smtp_service.py
+│   ├── test_text_normalizer.py
+│   ├── test_ticket_analysis_normalizer.py
 │   └── test_ticket_analysis_schema.py
 ├── uploads/
 │   ├── attachments/
@@ -1425,6 +1614,201 @@ The evaluation framework measures:
 * Average confidence for correct predictions.
 * Average confidence for incorrect predictions.
 * High-confidence error count.
+
+---
+
+## Ticket Analysis Normalization Architecture
+
+Hour 6 introduced a deterministic normalization layer between validated AI output and downstream business decision logic.
+
+```text
+Raw LLM Response
+        │
+        ▼
+JSON Object Extraction
+        │
+        ▼
+TicketAnalysisResponse
+        │
+        ▼
+TicketAnalysisNormalizer
+        │
+        ├── Text Normalization
+        ├── Classification Canonicalization
+        ├── Tag Normalization
+        ├── Confidence Normalization
+        └── Metadata Construction
+        │
+        ▼
+NormalizedTicketAnalysis
+        │
+        ▼
+Priority Assignment Engine
+        │
+        ▼
+Routing Engine
+        │
+        ▼
+Persistence
+```
+
+### Text Normalization
+
+Text normalization provides deterministic cleanup of AI-generated textual values.
+
+Implemented behavior includes:
+
+* Unicode NFKC normalization.
+* Leading and trailing whitespace removal.
+* Repeated whitespace collapsing.
+* Newline and tab normalization.
+* Optional empty-value conversion to None.
+
+### Classification Canonicalization
+
+The normalization service canonicalizes known aliases for:
+
+* Category.
+* AI-recommended priority.
+* Sentiment.
+* Suggested department.
+
+Examples:
+
+```text
+tech_support
+        ↓
+Technical Support
+
+urgent
+        ↓
+Critical
+
+frustrated
+        ↓
+Negative
+
+engineering
+        ↓
+Technical Support
+```
+
+Alias mappings are immutable application configuration.
+
+Canonical values remain aligned with the current ticket-analysis prompt vocabulary.
+
+Unknown values are preserved in normalized textual form rather than silently converted to fallback classifications.
+
+This ensures unsupported AI classifications remain observable.
+
+### Tag Normalization
+
+Suggested AI tags are normalized into deterministic slug-style values.
+
+Example:
+
+```text
+Payment API
+HTTP 503 / Payment Failure!
+PAYMENT_API
+""
+```
+
+becomes:
+
+```text
+payment-api
+http-503-payment-failure
+```
+
+The normalization algorithm:
+
+* Applies Unicode normalization.
+* Normalizes whitespace.
+* Converts text to lowercase.
+* Converts separators and unsupported characters to hyphens.
+* Removes leading and trailing hyphens.
+* Removes empty normalized tags.
+* Removes duplicate normalized tags.
+* Preserves first-seen order.
+
+### Confidence Normalization
+
+Confidence scores are normalized to deterministic precision.
+
+Example:
+
+```text
+0.876543
+```
+
+becomes:
+
+```text
+0.8765
+```
+
+Defensive clamping support exists to keep values within:
+
+```text
+0.0 <= confidence_score <= 1.0
+```
+
+The upstream TicketAnalysisResponse contract already rejects out-of-range confidence values, so clamping is defensive rather than a replacement for schema validation.
+
+### Normalization Metadata
+
+Each normalized analysis contains metadata describing normalization behavior.
+
+Metadata includes:
+
+* Original category.
+* Original priority.
+* Original sentiment.
+* Original department.
+* Whether category normalization occurred.
+* Whether priority normalization occurred.
+* Whether sentiment normalization occurred.
+* Whether department normalization occurred.
+* Number of removed duplicate tags.
+* Number of removed empty tags.
+* Whether confidence clamping occurred.
+
+This provides observability and future audit support without mutating the original AI response.
+
+### Immutability
+
+NormalizedTicketAnalysis and NormalizationMetadata are immutable Pydantic contracts.
+
+This prevents downstream services from accidentally modifying normalized AI analysis after the normalization boundary.
+
+### Separation of AI Recommendation and Business Decision
+
+The normalized schema stores the AI priority as:
+
+```text
+ai_recommended_priority
+```
+
+The final ticket priority will be assigned by the deterministic priority engine.
+
+This produces the intended architecture:
+
+```text
+AI Recommendation
+        │
+        ▼
+Schema Validation
+        │
+        ▼
+Deterministic Normalization
+        │
+        ▼
+Business Priority Assignment
+        │
+        ▼
+Final Ticket Priority
+```
 
 ---
 
@@ -1901,21 +2285,21 @@ python -m pytest -v
 Current result:
 
 ```text
-68 passed
+105 passed
 1 warning
 0 failures
 ```
 
-Run the Hour 5 evaluation tests:
+Run the Hour 6 normalization tests:
 
 ```bash
-python -m pytest tests/test_evaluation_schema.py tests/test_evaluation_metrics.py -v
+python -m pytest tests/test_text_normalizer.py tests/test_ticket_analysis_normalizer.py -v
 ```
 
 Current result:
 
 ```text
-10 passed
+37 passed
 ```
 
 The complete automated suite verifies:
@@ -1936,6 +2320,20 @@ The complete automated suite verifies:
 * Case-type accuracy.
 * Confidence statistics.
 * Empty evaluation result handling.
+* Unicode text normalization.
+* Whitespace normalization.
+* Optional-text normalization.
+* Classification alias canonicalization.
+* Unknown classification preservation.
+* Tag normalization.
+* Empty-tag removal.
+* Duplicate-tag removal.
+* Stable tag ordering.
+* Confidence precision normalization.
+* Normalization metadata.
+* Original AI response immutability.
+* Normalized contract immutability.
+* Strict normalized schema validation.
 
 Automated tests do not consume Groq API quota.
 
@@ -1980,7 +2378,7 @@ Coverage improvement is scheduled during the dedicated testing and hardening pha
 Current regression status is:
 
 ```text
-68 passed
+105 passed
 1 warning
 0 failures
 ```
@@ -2068,13 +2466,12 @@ docs/ai_evaluation_report.json
 
 ## Current Limitations
 
-At the end of Hour 5:
+At the end of Hour 6:
 
-* Category normalization is not implemented.
-* Tag normalization is not implemented.
 * Deterministic priority assignment is not implemented.
 * Priority justification is not implemented.
 * Team routing is not implemented.
+* Unknown normalized classifications are preserved but downstream rejection or fallback policy is not yet implemented.
 * AI confidence scores are not calibrated.
 * The baseline prompt produces high-confidence classification errors.
 * Standard, ambiguous, and adversarial cases require future prompt or business-rule improvements.
@@ -2129,6 +2526,14 @@ At the end of Hour 5:
 * Application-owned retry policy.
 * Reproducible labeled AI evaluation.
 * Adversarial evaluation cases.
+* Unicode NFKC normalization before downstream business processing.
+* Deterministic normalization of AI-generated textual values.
+* Canonical classification normalization.
+* Preservation of unknown classifications for downstream observability.
+* Deterministic tag normalization and deduplication.
+* Immutable normalized ticket-analysis contracts.
+* Preservation of original AI classifications in normalization metadata.
+* Separation of AI-recommended priority from final business priority.
 
 ### Planned
 
@@ -2357,6 +2762,92 @@ This separation prevents README duplication while preserving:
 * Evaluation evidence.
 * Prompt evolution history.
 
+### Why Add a Normalization Layer After Schema Validation?
+
+Schema validation and normalization solve different problems.
+
+Schema validation verifies that AI output has the required structure and data types.
+
+Normalization converts structurally valid but inconsistent values into deterministic application representations.
+
+The processing boundary is therefore:
+
+```text
+Raw AI Output
+      │
+      ▼
+JSON Extraction
+      │
+      ▼
+Schema Validation
+      │
+      ▼
+Deterministic Normalization
+      │
+      ▼
+Business Rules
+```
+
+This prevents provider-specific formatting variation from leaking into priority assignment, routing, persistence, and analytics.
+
+### Why Preserve Unknown Classification Values?
+
+Silently mapping unsupported classifications to fallback values can hide prompt regressions and provider behavior changes.
+
+SupportIQ AI preserves unknown values in normalized textual form so downstream services can explicitly reject, route, monitor, or handle them.
+
+### Why Normalize Tags Before Persistence?
+
+LLM-generated tags may differ in casing, whitespace, punctuation, or separator style.
+
+Without normalization:
+
+```text
+Payment API
+payment-api
+PAYMENT_API
+```
+
+could be persisted as three separate tags.
+
+Normalization produces a stable representation:
+
+```text
+payment-api
+```
+
+This improves filtering, analytics, persistence consistency, and duplicate prevention.
+
+### Why Preserve First-Seen Tag Order?
+
+Using an unordered set directly would make normalized output ordering nondeterministic.
+
+SupportIQ AI uses a set for membership checks and a sequence for output construction.
+
+This provides efficient duplicate detection while preserving deterministic output.
+
+### Why Use Immutable Normalized Contracts?
+
+Normalized analysis represents the trusted output of a deterministic processing boundary.
+
+Immutability prevents downstream services from accidentally changing classifications, tags, confidence values, or normalization metadata.
+
+Any later business decision should produce a new domain object rather than mutate normalized AI analysis.
+
+### Why Separate AI-Recommended Priority from Final Priority?
+
+The Hour 5 evaluation demonstrated that AI priority predictions are imperfect and confidence scores can be overconfident.
+
+The normalized contract therefore stores:
+
+```text
+ai_recommended_priority
+```
+
+The final ticket priority will be produced by deterministic business rules.
+
+This prevents the LLM recommendation from becoming an authoritative business decision.
+
 ---
 
 ## Development Roadmap
@@ -2449,16 +2940,49 @@ Secure IMAP ingestion, MIME parsing, attachment processing, integration testing,
 * AI prompt deliverable documentation.
 * 68-test full regression verification.
 
-### Hours 6–7
+### Hour 6 — Completed
 
-* AI output validation.
-* Category normalization.
-* Tag normalization.
-* Confidence handling.
+* Dedicated ticket-analysis normalization boundary.
+* Reusable text-normalization utilities.
+* Unicode NFKC normalization.
+* Whitespace normalization.
+* Optional-text normalization.
+* Canonical category normalization.
+* Category alias mappings.
+* Canonical AI-priority normalization.
+* Priority alias mappings.
+* Canonical sentiment normalization.
+* Sentiment alias mappings.
+* Canonical department normalization.
+* Department alias mappings.
+* Unknown-label preservation.
+* Tag slug normalization.
+* Empty-tag removal.
+* Duplicate-tag removal.
+* Stable first-seen tag ordering.
+* Confidence precision normalization.
+* Defensive confidence clamping support.
+* Immutable normalized ticket-analysis schema.
+* Immutable normalization metadata.
+* Original classification preservation.
+* Normalization change flags.
+* Tag-removal metadata.
+* AI-recommended priority separation.
+* 37 focused normalization tests.
+* 105-test full regression verification.
+
+### Hour 7
+
 * Deterministic priority assignment engine.
+* Priority escalation rules.
+* AI recommendation and business-rule reconciliation.
 * Priority justification.
 * Configurable routing engine.
+* Category-to-team mappings.
+* Priority-aware routing.
+* Unknown-classification handling policy.
 * Unit tests.
+* Full regression verification.
 
 ### Hours 8–9
 

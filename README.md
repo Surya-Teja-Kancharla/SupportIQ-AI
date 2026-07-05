@@ -22,7 +22,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * Auditability
 * Security and data privacy
 
-> **Current Development Status:** Hours 1–4 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation/storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective LLM retry integration, provider failure classification, and 58 passing automated tests.
+> **Current Development Status:** Hours 1–5 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, and 68 passing automated tests.
 
 ---
 
@@ -40,6 +40,8 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * [Email Infrastructure Architecture](#email-infrastructure-architecture)
 * [Email Ingestion Orchestration](#email-ingestion-orchestration)
 * [AI Analysis Architecture](#ai-analysis-architecture)
+* [AI Evaluation Architecture](#ai-evaluation-architecture)
+* [Prompt Engineering and Documentation](#prompt-engineering-and-documentation)
 * [SMTP Transport](#smtp-transport)
 * [Exception Architecture](#exception-architecture)
 * [Retry Infrastructure](#retry-infrastructure)
@@ -48,9 +50,10 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * [Configuration Management](#configuration-management)
 * [Environment Variables](#environment-variables)
 * [Installation and Setup](#installation-and-setup)
-* [Running the IMAP Integration Test](#running-the-imap-integration-test)
-* [Running the SMTP Integration Test](#running-the-smtp-integration-test)
+* [Running Integration Tests](#running-integration-tests)
+* [Running AI Evaluation](#running-ai-evaluation)
 * [Running Automated Tests](#running-automated-tests)
+* [AI Evaluation Results](#ai-evaluation-results)
 * [Test Coverage](#test-coverage)
 * [Current Limitations](#current-limitations)
 * [Security Considerations](#security-considerations)
@@ -352,30 +355,79 @@ Completed:
 * Focused Hour 4 automated test verification.
 * Full application regression test verification.
 
+### Hour 5 — AI Evaluation, Prompt Quality Measurement, and Real Provider Verification
+
+Completed:
+
+* Corrected environment configuration used for real-provider execution.
+* Controlled real Groq API smoke testing.
+* Successful structured analysis of a real support-ticket example.
+* Verification of the complete provider path:
+  * Prompt selection.
+  * Prompt construction.
+  * Groq request execution.
+  * Raw completion retrieval.
+  * JSON extraction.
+  * Pydantic response validation.
+  * Typed `TicketAnalysisResponse` creation.
+* Labeled AI evaluation dataset.
+* Versioned evaluation dataset metadata.
+* Unique evaluation case identifiers.
+* Explicit expected category labels.
+* Explicit expected priority labels.
+* Explicit expected sentiment labels.
+* Explicit expected department labels.
+* Standard ticket cases.
+* Priority-sensitive ticket cases.
+* Ambiguous ticket cases.
+* Adversarial and prompt-injection-oriented ticket cases.
+* Strict evaluation dataset schema validation.
+* Rejection of unknown evaluation case types.
+* Rejection of unexpected evaluation dataset fields.
+* Evaluation result models.
+* Per-case correctness tracking.
+* Evaluation runner.
+* Per-label accuracy calculation.
+* Structured-output validity calculation.
+* Case-type all-label accuracy calculation.
+* Confidence statistics.
+* Correct-prediction confidence measurement.
+* Incorrect-prediction confidence measurement.
+* High-confidence error detection.
+* Failed-analysis accounting.
+* Empty-result handling.
+* Floating-point-safe metric calculation.
+* Evaluation metrics unit tests.
+* Evaluation dataset schema tests.
+* Real Groq execution against the complete evaluation dataset.
+* AI evaluation report generation.
+* Persistent report output to `docs/ai_evaluation_report.json`.
+* Baseline prompt-quality measurement for `ticket-analysis-v1`.
+* Identification of classification and confidence-calibration limitations.
+* Final full regression verification.
+
 ### Automated Testing Status
 
 ```text
-58 tests passed
+68 tests passed
 1 third-party dependency deprecation warning
 0 test failures
 0 regressions
 ```
 
-Focused Hour 4 AI infrastructure test suite:
+Focused Hour 5 evaluation suite:
 
 ```text
-22 tests passed in 0.31s
+10 tests passed
 ```
 
 Full application regression suite:
 
 ```text
-58 tests passed in 0.62s
+68 tests passed
 ```
 
 The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
-
-A controlled real Groq API smoke test remains recommended as integration verification before the AI evaluation and prompt-quality work performed during Hour 5.
 
 ---
 
@@ -663,6 +715,60 @@ Non-retryable failures include:
 
 This avoids wasting API quota and processing time retrying permanent failures.
 
+### AI Evaluation Framework
+
+SupportIQ AI includes a reproducible AI evaluation subsystem.
+
+The evaluation pipeline:
+
+```text
+Versioned Evaluation Dataset
+          │
+          ▼
+Strict Dataset Validation
+          │
+          ▼
+Evaluation Runner
+          │
+          ▼
+LLMService
+          │
+          ▼
+Validated TicketAnalysisResponse
+          │
+          ▼
+Expected vs Actual Comparison
+          │
+          ▼
+Per-Case EvaluationResult
+          │
+          ▼
+Metric Aggregation
+          │
+          ├── Structured Output Validity
+          ├── Category Accuracy
+          ├── Priority Accuracy
+          ├── Sentiment Accuracy
+          ├── Department Accuracy
+          ├── Case-Type Accuracy
+          ├── Confidence Statistics
+          └── High-Confidence Errors
+          │
+          ▼
+AI Evaluation Report
+```
+
+The evaluation framework separates:
+
+* Evaluation data.
+* Provider execution.
+* Typed analysis results.
+* Correctness comparison.
+* Metric aggregation.
+* Report generation.
+
+This allows prompt versions and future model configurations to be evaluated reproducibly.
+
 ---
 
 ## Technology Stack
@@ -680,9 +786,19 @@ This avoids wasting API quota and processing time retrying permanent failures.
 * Groq API
 * Groq Python SDK
 * Llama 3.3 70B Versatile
-* Provider-independent `LLMService` abstraction
+* Provider-independent `LLMService` 
 * Versioned prompt registry
 * Pydantic structured-response validation
+
+### AI Evaluation
+
+* Versioned labeled JSON dataset
+* Strict Pydantic evaluation schemas
+* Evaluation runner
+* Per-label accuracy metrics
+* Case-type metrics
+* Confidence analysis
+* JSON report generation
 
 ### Database
 
@@ -822,6 +938,11 @@ SupportIQ-AI/
 │   │   └── retry.py
 │   ├── database/
 │   │   └── schema.sql
+│   ├── evaluation/
+│   │   ├── __init__.py
+│   │   ├── metrics.py
+│   │   ├── runner.py
+│   │   └── schemas.py
 │   ├── models/
 │   │   └── __init__.py
 │   ├── prompts/
@@ -849,20 +970,25 @@ SupportIQ-AI/
 │       ├── __init__.py
 │       └── json_extractor.py
 ├── docs/
-├── folder_structure.txt
+│   ├── ai_evaluation_report.json
+│   └── prompts.md
 ├── logs/
 ├── main.py
 ├── pytest.ini
 ├── requirements.txt
 ├── sample_data/
-├── structure.py
+│   └── ai_evaluation_dataset.json
 ├── tests/
 │   ├── __init__.py
+│   ├── manual_run_ai_evaluation.py
+│   ├── manual_test_groq.py
 │   ├── manual_test_imap.py
 │   ├── manual_test_smtp.py
 │   ├── test_attachment_service.py
 │   ├── test_email_ingestion_service.py
 │   ├── test_email_parser.py
+│   ├── test_evaluation_metrics.py
+│   ├── test_evaluation_schema.py
 │   ├── test_groq_llm_service.py
 │   ├── test_json_extractor.py
 │   ├── test_retry.py
@@ -1245,6 +1371,120 @@ This allows downstream workflow components to distinguish between:
 
 ---
 
+## AI Evaluation Architecture
+
+Hour 5 introduced a reproducible AI evaluation subsystem.
+
+```text
+sample_data/ai_evaluation_dataset.json
+                    │
+                    ▼
+          Evaluation Dataset Schema
+                    │
+                    ▼
+              EvaluationRunner
+                    │
+                    ▼
+                 LLMService
+                    │
+                    ▼
+         TicketAnalysisResponse
+                    │
+                    ▼
+         Expected Label Comparison
+                    │
+                    ▼
+           EvaluationResult Models
+                    │
+                    ▼
+          calculate_evaluation_metrics()
+                    │
+                    ▼
+             EvaluationMetrics
+                    │
+                    ▼
+      docs/ai_evaluation_report.json
+```
+
+The dataset includes:
+
+* Standard support tickets.
+* Priority-sensitive cases.
+* Ambiguous requests.
+* Adversarial and prompt-injection-oriented cases.
+
+The evaluation framework measures:
+
+* Structured-output validity.
+* Category accuracy.
+* Priority accuracy.
+* Sentiment accuracy.
+* Department accuracy.
+* Per-case-type all-label accuracy.
+* Average confidence.
+* Average confidence for correct predictions.
+* Average confidence for incorrect predictions.
+* High-confidence error count.
+
+---
+
+## Prompt Engineering and Documentation
+
+Executable prompt definitions are stored under:
+
+```text
+app/prompts/
+```
+
+The current evaluated prompt implementation is:
+
+```text
+app/prompts/ticket_analysis_v1.py
+```
+
+Prompt selection is performed through:
+
+```text
+app/prompts/registry.py
+```
+
+Human-readable prompt documentation required for submission is stored in:
+
+```text
+docs/prompts.md
+```
+
+The prompt documentation records:
+
+* Prompt identifier.
+* Prompt version.
+* Prompt purpose.
+* Runtime implementation path.
+* Runtime usage path.
+* Model configuration.
+* System prompt.
+* User prompt template.
+* Input contract.
+* Output contract.
+* Allowed classification vocabularies.
+* Null semantics.
+* Confidence-score semantics.
+* Hallucination-reduction constraints.
+* Prompt-injection defenses.
+* Validation behavior.
+* Evaluation dataset.
+* Baseline evaluation results.
+* Known limitations.
+* Prompt evolution policy.
+
+The generated evaluation evidence is stored in:
+
+```text
+docs/ai_evaluation_report.json
+```
+
+---
+
 ## SMTP Transport
 
 SupportIQ AI sends outbound emails through Gmail SMTP using:
@@ -1478,6 +1718,7 @@ SMTP_PORT=587
 
 EMAIL_POLL_INTERVAL_SECONDS=60
 EMAIL_FOLDER=INBOX
+EMAIL_MARK_AS_READ_AFTER_SUCCESS=true
 
 MAX_ATTACHMENT_SIZE_MB=10
 ALLOWED_ATTACHMENT_TYPES=pdf,png,jpg,jpeg,txt,docx
@@ -1588,63 +1829,64 @@ Do not use the normal Google account password.
 
 ---
 
-## Running the IMAP Integration Test
+## Running Integration Tests
 
-Send test support emails to the configured support inbox.
-
-Recommended test cases:
-
-1. Plain-text email.
-2. HTML-formatted email.
-3. Email containing an allowed attachment.
-
-Run:
+### IMAP
 
 ```bash
 python -m tests.manual_test_imap
 ```
 
-The integration test verifies:
-
-* Real IMAP SSL connectivity.
-* Gmail App Password authentication.
-* Mailbox selection.
-* Unread message detection.
-* Non-destructive retrieval.
-* MIME parsing.
-* HTML fallback.
-* Attachment processing.
-
-The manual test does not mark retrieved emails as read.
-
----
-
-## Running the SMTP Integration Test
-
-Configure a valid recipient address in:
-
-```text
-tests/manual_test_smtp.py
-```
-
-Run:
+### SMTP
 
 ```bash
 python -m tests.manual_test_smtp
 ```
 
-The integration test verifies:
+### Real Groq Smoke Test
 
-* Real SMTP connectivity.
-* STARTTLS negotiation.
-* Gmail App Password authentication.
-* Message construction.
-* Plain-text content.
-* HTML alternative content.
-* Message-ID generation.
-* Real message delivery.
+```bash
+python -m tests.manual_test_groq
+```
 
-A successful SMTP transaction alone does not prove final mailbox delivery. For manual verification, confirm that the message is received by the destination mailbox.
+The Groq smoke test verifies:
+
+* Real provider connectivity.
+* Prompt registry selection.
+* Prompt construction.
+* Structured provider output.
+* JSON extraction.
+* Pydantic validation.
+* Typed ticket-analysis response creation.
+
+---
+
+## Running AI Evaluation
+
+Run the complete real-provider AI evaluation:
+
+```bash
+python -m tests.manual_run_ai_evaluation
+```
+
+The evaluation:
+
+1. Loads the versioned labeled dataset.
+2. Validates the dataset schema.
+3. Executes every case through `LLMService`.
+4. Validates structured model output.
+5. Compares actual labels with expected labels.
+6. Calculates aggregate metrics.
+7. Calculates confidence statistics.
+8. Generates the persistent evaluation report.
+
+Output:
+
+```text
+docs/ai_evaluation_report.json
+```
+
+Real-provider evaluation consumes Groq API quota and may encounter provider rate limits.
 
 ---
 
@@ -1659,52 +1901,43 @@ python -m pytest -v
 Current result:
 
 ```text
-58 passed
+68 passed
 1 warning
+0 failures
 ```
 
-Run the focused Hour 4 AI infrastructure tests:
+Run the Hour 5 evaluation tests:
 
 ```bash
-python -m pytest \
-    tests/test_json_extractor.py \
-    tests/test_ticket_analysis_schema.py \
-    tests/test_groq_llm_service.py \
-    -v
+python -m pytest tests/test_evaluation_schema.py tests/test_evaluation_metrics.py -v
 ```
 
 Current result:
 
 ```text
-22 passed
+10 passed
 ```
 
-The focused Hour 4 suite verifies:
+The complete automated suite verifies:
 
-* Clean JSON extraction.
-* JSON extraction from markdown code fences.
-* JSON extraction from surrounding response text.
-* Braces inside JSON string values.
-* JSON array rejection.
-* Empty-response rejection.
-* Missing-JSON rejection.
-* Valid ticket-analysis schema parsing.
-* Required-field enforcement.
-* Confidence-score bounds.
-* Unexpected-field rejection.
-* Valid Groq response handling.
-* Malformed JSON handling.
-* Schema-invalid AI output handling.
-* Timeout retry behavior.
-* Rate-limit retry behavior.
-* Authentication failure behavior.
-* Connection failure retry behavior.
-* Empty completion handling.
-* Invalid completion structure handling.
-* HTTP 5xx retry behavior.
-* HTTP 4xx immediate-failure behavior.
+* Attachment security and validation.
+* Email parsing.
+* Email ingestion orchestration.
+* SMTP transport behavior.
+* Generic retry behavior.
+* JSON extraction.
+* Ticket-analysis schema contracts.
+* Groq provider behavior with mocked network boundaries.
+* LLM failure classification.
+* Selective retry behavior.
+* Evaluation dataset validation.
+* Evaluation metric calculation.
+* Failed-analysis accounting.
+* Case-type accuracy.
+* Confidence statistics.
+* Empty evaluation result handling.
 
-All Hour 4 AI-infrastructure tests run against a mocked Groq client. No automated test in the current suite makes a real network call to Groq; the only real-provider verification to date is the manual smoke test recommended below.
+Automated tests do not consume Groq API quota.
 
 ---
 
@@ -1744,29 +1977,117 @@ A `--cov=app` run including the new Hour 4 modules (`llm_service.py`, `groq_llm_
 
 Coverage improvement is scheduled during the dedicated testing and hardening phase.
 
+Current regression status is:
+
+```text
+68 passed
+1 warning
+0 failures
+```
+
+The warning originates from the BeautifulSoup/lxml dependency and does not affect application behavior.
+
+---
+
+## AI Evaluation Results
+
+Baseline real-provider evaluation for:
+
+```text
+Prompt Version: ticket-analysis-v1
+Model: llama-3.3-70b-versatile
+Dataset Version: 1.0.0
+Total Cases: 24
+```
+
+Results:
+
+```text
+Successful Analyses:            24
+Failed Analyses:                 0
+
+Structured Output Validity:    100.00%
+
+Category Accuracy:              75.00%
+Priority Accuracy:              66.67%
+Sentiment Accuracy:             79.17%
+Department Accuracy:            79.17%
+
+Standard Case Accuracy:         41.67%
+Priority-Sensitive Accuracy:   100.00%
+Ambiguous Case Accuracy:        50.00%
+Adversarial Case Accuracy:      50.00%
+
+Average Confidence:              0.8208
+Average Confidence (Correct):    0.8154
+Average Confidence (Incorrect):  0.8273
+
+High-Confidence Errors:         10
+```
+
+### Evaluation Findings
+
+The baseline evaluation demonstrates:
+
+* The AI pipeline produced schema-valid structured output for every evaluation case.
+* Priority-sensitive cases achieved perfect all-label accuracy in the current dataset.
+* Category and priority classification remain improvement areas.
+* Ambiguous and adversarial cases expose classification limitations.
+* Confidence scores are not yet well calibrated.
+* Incorrect predictions received slightly higher average confidence than correct predictions.
+* High-confidence errors demonstrate that confidence scores must not be used as the sole basis for automated business decisions.
+
+These findings support the planned hybrid design:
+
+```text
+LLM Recommendation
+        │
+        ▼
+Schema Validation
+        │
+        ▼
+Normalization
+        │
+        ▼
+Deterministic Priority Rules
+        │
+        ▼
+Configurable Routing
+        │
+        ▼
+Persisted Ticket Decision
+```
+
+The complete machine-readable evaluation report is stored in:
+
+```text
+docs/ai_evaluation_report.json
+```
+
 ---
 
 ## Current Limitations
 
-At the current development stage:
+At the end of Hour 5:
 
-* Real Groq API smoke testing has not yet been completed.
-* AI classification accuracy has not yet been evaluated against a labeled dataset.
-* AI priority recommendation consistency has not yet been evaluated against expected labels.
-* Prompt edge cases and ambiguous customer requests require evaluation.
-* Prompt versions have not yet been benchmarked against each other.
 * Category normalization is not implemented.
 * Tag normalization is not implemented.
 * Deterministic priority assignment is not implemented.
+* Priority justification is not implemented.
 * Team routing is not implemented.
+* AI confidence scores are not calibrated.
+* The baseline prompt produces high-confidence classification errors.
+* Standard, ambiguous, and adversarial cases require future prompt or business-rule improvements.
+* Only `ticket-analysis-v1` has been evaluated.
+* Prompt-version comparison has not yet been performed.
 * SQLAlchemy persistence is not implemented.
 * Repository layer is not implemented.
 * Ticket creation is not implemented.
-* Automatic acknowledgement sending is not implemented.
+* Automatic acknowledgement orchestration is not implemented.
 * Inbox polling scheduler is not implemented.
 * Duplicate email processing prevention is not implemented.
-* Emails are not yet marked as processed.
-* Retry infrastructure is not yet integrated into IMAP, SMTP, database, or workflow orchestration boundaries.
+* Emails are not yet marked as processed by the complete workflow.
+* Retry infrastructure is not yet integrated into IMAP, SMTP, database, or full workflow orchestration boundaries.
 * Ticket REST APIs are not implemented.
 * Manual agent review is not implemented.
 * Ticket lifecycle transitions are not implemented.
@@ -1804,6 +2125,10 @@ At the current development stage:
 * Prompt-injection mitigation instructions.
 * LLM output trust boundaries.
 * Selective retry of transient LLM provider failures.
+* Groq SDK automatic retries disabled.
+* Application-owned retry policy.
+* Reproducible labeled AI evaluation.
+* Adversarial evaluation cases.
 
 ### Planned
 
@@ -1959,6 +2284,79 @@ SupportIQ AI retries only failures that may succeed on a subsequent attempt:
 
 Authentication errors, invalid requests, malformed responses, and schema-invalid responses fail immediately.
 
+### Why Disable Groq SDK Retries?
+
+The application already owns retry policy.
+
+Disabling SDK retries prevents nested retry behavior and ensures:
+
+* Predictable retry counts.
+* Centralized backoff policy.
+* Consistent structured logging.
+* Typed retry exhaustion behavior.
+* Easier deterministic testing.
+
+### Why Structured JSON Logging?
+
+Machine-readable logs improve event correlation, automated processing, debugging, and future observability integration.
+
+### Why Pydantic Schemas?
+
+Pydantic models establish validated contracts between application layers and improve type safety, maintainability, testing, and failure visibility.
+
+### Why Separate Attachment Processing?
+
+Attachment validation and storage are independent security-sensitive responsibilities and should not be coupled to IMAP transport.
+
+### Why a Provider-Independent LLM Boundary?
+
+Application workflow logic depends on `LLMService`, allowing provider implementations to change without redesigning downstream ticket-processing logic.
+
+### Why Version Prompts?
+
+Prompt changes can alter classification accuracy, priority recommendations, confidence scores, and downstream workflow behavior.
+
+Versioning provides reproducibility, regression comparison, evaluation traceability, and safer prompt evolution.
+
+### Why Treat LLM Output as Untrusted Data?
+
+LLMs may produce malformed JSON, missing fields, unexpected fields, or invalid values.
+
+All output must pass extraction and strict schema validation before entering downstream business logic.
+
+### Why Maintain a Labeled Evaluation Dataset?
+
+Prompt quality cannot be demonstrated through a small number of manually selected examples.
+
+A labeled evaluation dataset provides:
+
+* Reproducibility.
+* Classification measurement.
+* Priority accuracy measurement.
+* Edge-case coverage.
+* Prompt regression detection.
+* Prompt-version comparison.
+* Evidence for engineering decisions.
+
+### Why Measure Confidence Errors?
+
+A confidence score is useful only if its behavior is understood.
+
+The Hour 5 evaluation showed that incorrect predictions can receive high confidence. Confidence is therefore treated as advisory metadata rather than authoritative business logic.
+
+### Why Keep Prompt Documentation Separate from Executable Prompts?
+
+Executable prompts belong in version-controlled application modules.
+
+Submission documentation belongs in `docs/prompts.md`.
+
+This separation prevents README duplication while preserving:
+
+* Exact runtime prompt traceability.
+* Human-readable prompt documentation.
+* Evaluation evidence.
+* Prompt evolution history.
+
 ---
 
 ## Development Roadmap
@@ -2025,25 +2423,31 @@ Secure IMAP ingestion, MIME parsing, attachment processing, integration testing,
 * Focused test verification.
 * Full regression testing.
 
-### Hour 5 — Next
+### Hour 5 — Completed
 
-* Controlled real Groq API smoke test.
-* Real support-ticket analysis verification.
+* Environment configuration cleanup.
+* Groq SDK retry disabling.
+* Real Groq smoke testing.
+* Real structured ticket analysis verification.
 * Labeled AI evaluation dataset.
-* Classification accuracy measurement.
-* Priority recommendation accuracy measurement.
-* Sentiment accuracy measurement.
-* Department recommendation accuracy measurement.
+* Evaluation dataset schemas.
+* Standard ticket cases.
+* Priority-sensitive cases.
+* Ambiguous cases.
+* Adversarial cases.
+* Evaluation runner.
+* Per-label accuracy metrics.
 * Structured-output validity measurement.
-* Prompt edge-case testing.
-* Ambiguous-ticket testing.
-* Prompt-injection resistance testing.
-* Confidence-score behavior evaluation.
-* Prompt quality refinement.
-* Prompt version comparison if changes are required.
-* AI evaluation report generation.
+* Case-type all-label accuracy.
+* Confidence statistics.
+* High-confidence error detection.
+* Evaluation schema tests.
+* Evaluation metric tests.
+* Real-provider evaluation execution.
+* Baseline `ticket-analysis-v1` quality measurement.
+* Persistent AI evaluation report generation.
 * AI prompt deliverable documentation.
-* Final Hour 5 regression verification.
+* 68-test full regression verification.
 
 ### Hours 6–7
 
@@ -2155,29 +2559,34 @@ The completed repository will contain:
 10. Architecture documentation.
 11. Automated tests.
 12. Test coverage results.
-13. Demo instructions.
-14. A 5–10 minute end-to-end screen recording.
+13. AI evaluation dataset and report.
+14. Demo instructions.
+15. A 5–10 minute end-to-end screen recording.
 
 ---
 
 ## Assumptions
 
 * Gmail is used as the support inbox for demonstration purposes.
-* Gmail IMAP access is authenticated using a Google App Password.
+* Gmail IMAP access uses a Google App Password.
 * Gmail SMTP is used for outbound email delivery.
 * PostgreSQL runs locally during development and demonstration.
-* Groq is used as the LLM inference provider.
-* AI output will not be trusted directly and will pass through validation and normalization layers.
+* Groq is used as the current LLM inference provider.
+* The application owns LLM retry behavior; Groq SDK retries are disabled.
+* AI output is untrusted and must pass JSON extraction and Pydantic validation.
+* The current evaluated prompt is `ticket-analysis-v1`.
+* Evaluated prompt versions are treated as immutable.
+* New prompt behavior should create a new prompt version and be evaluated against the labeled dataset.
+* AI confidence scores are advisory and are not authoritative business decisions.
 * Priority assignment will use a hybrid approach combining AI recommendations and deterministic business rules.
 * Team routing will be configurable.
-* Support agents will remain able to review and override AI-generated classifications.
-* Incoming attachments are considered untrusted input.
+* Support agents will remain able to review and override automated decisions.
+* Incoming attachments are untrusted input.
 * Runtime customer data, attachments, credentials, and logs must not be committed to Git.
 * Email Message-ID values will form part of the idempotency strategy.
-* Successfully retrieved emails will not be marked as processed until the complete downstream processing boundary succeeds.
-* Retry behavior is applied selectively to transient failures rather than indiscriminately retrying all exceptions.
-* The modular monolith architecture is intended to provide production-style separation of concerns without introducing unnecessary distributed-system complexity.
-* Prompt version `ticket-analysis-v1` has not yet been validated against real Groq responses or a labeled evaluation set; its output quality is unverified as of Hour 4.
+* Retrieved emails will not be marked as processed until the complete downstream success boundary is reached.
+* Retry behavior is applied selectively to transient failures.
+* The modular monolith architecture provides production-style separation of concerns without unnecessary distributed-system complexity.
 
 ---
 

@@ -41,6 +41,7 @@ class GroqLLMService(LLMService):
         self.client = Groq(
             api_key=settings.groq_api_key,
             timeout=settings.groq_timeout_seconds,
+            max_retries=0,
         )
 
         self.model = settings.groq_model

@@ -54,7 +54,17 @@ class DashboardService:
 
         return TicketListResult(
             tickets=tuple(
-                TicketListItem.model_validate(ticket)
+                TicketListItem(
+                    id=ticket.id,
+                    ticket_number=ticket.ticket_number,
+                    email_subject=ticket.subject,
+                    category=ticket.category,
+                    priority=ticket.priority,
+                    status=ticket.status,
+                    assigned_team=ticket.assigned_team,
+                    confidence_score=ticket.confidence_score,
+                    received_at=ticket.received_at,
+                )
                 for ticket in tickets
             ),
             total=total,
@@ -98,21 +108,21 @@ class DashboardService:
             customer_name=ticket.customer_name,
             company=ticket.company,
             sender_email=ticket.sender_email,
-            email_subject=ticket.email_subject,
-            original_email_body=ticket.original_email_body,
-            issue_summary=ticket.issue_summary,
-            detailed_description=ticket.detailed_description,
+            email_subject=ticket.subject,
+            original_email_body=ticket.body,
+            issue_summary=ticket.summary or "",
+            detailed_description=ticket.description or "",
             category=ticket.category,
             priority=ticket.priority,
             sentiment=ticket.sentiment,
-            product_or_service=ticket.product_or_service,
+            product_or_service=ticket.product,
             suggested_department=ticket.suggested_department,
             assigned_team=ticket.assigned_team,
             confidence_score=ticket.confidence_score,
             status=ticket.status,
             received_at=ticket.received_at,
-            created_at=ticket.created_at,
-            updated_at=ticket.updated_at,
+            created_at=ticket.received_at,
+            updated_at=ticket.updated_at or ticket.received_at,
             priority_reason=ticket.priority_reason,
             suggested_reply=ticket.suggested_reply,
             attachments=tuple(

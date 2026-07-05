@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
+
     <title>SupportIQ Agent Dashboard</title>
 
     <style>
@@ -30,16 +32,47 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
+            align-items: end;
             margin-bottom: 24px;
             padding: 20px;
             background: white;
             border-radius: 8px;
         }
 
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-field label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
         input,
         select,
+        button,
+        .button-link {
+            padding: 9px 11px;
+            font-size: 14px;
+        }
+
+        select,
+        input {
+            min-width: 170px;
+        }
+
         button {
-            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .button-link {
+            display: inline-block;
+            border: 1px solid #9ca3af;
+            color: #1f2937;
+            background: #f9fafb;
+            text-decoration: none;
         }
 
         table {
@@ -70,7 +103,29 @@
         }
 
         .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
             margin-top: 20px;
+        }
+
+        .pagination-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .pagination-link {
+            display: inline-block;
+            padding: 8px 12px;
+            border: 1px solid #9ca3af;
+            color: #1f2937;
+            background: white;
+            text-decoration: none;
+        }
+
+        .active-filters {
+            margin-bottom: 16px;
         }
     </style>
 </head>
@@ -78,7 +133,10 @@
 <body>
 <header>
     <h1>SupportIQ Agent Dashboard</h1>
-    <p>AI-assisted support ticket monitoring and triage</p>
+
+    <p>
+        AI-assisted support ticket monitoring and triage
+    </p>
 </header>
 
 <main>
@@ -89,49 +147,206 @@
         method="get"
         action="/dashboard/tickets"
     >
-        <input
-            type="text"
-            name="status"
-            placeholder="Status"
-            value="{{ filters.status or '' }}"
-        >
+        <div class="filter-field">
+            <label for="status">
+                Status
+            </label>
 
-        <input
-            type="text"
-            name="priority"
-            placeholder="Priority"
-            value="{{ filters.priority or '' }}"
-        >
+            <select
+                id="status"
+                name="status"
+            >
+                <option value="">
+                    All Statuses
+                </option>
 
-        <input
-            type="text"
-            name="category"
-            placeholder="Category"
-            value="{{ filters.category or '' }}"
-        >
+                <option
+                    value="open"
+                    {% if filters.status == "open" %}
+                    selected
+                    {% endif %}
+                >
+                    Open
+                </option>
 
-        <input
-            type="text"
-            name="assigned_team"
-            placeholder="Assigned Team"
-            value="{{ filters.assigned_team or '' }}"
-        >
+                <option
+                    value="in_progress"
+                    {% if filters.status == "in_progress" %}
+                    selected
+                    {% endif %}
+                >
+                    In Progress
+                </option>
 
-        <input
-            type="number"
-            name="limit"
-            min="1"
-            max="100"
-            value="{{ result.limit }}"
-        >
+                <option
+                    value="resolved"
+                    {% if filters.status == "resolved" %}
+                    selected
+                    {% endif %}
+                >
+                    Resolved
+                </option>
+
+                <option
+                    value="closed"
+                    {% if filters.status == "closed" %}
+                    selected
+                    {% endif %}
+                >
+                    Closed
+                </option>
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="priority">
+                Priority
+            </label>
+
+            <select
+                id="priority"
+                name="priority"
+            >
+                <option value="">
+                    All Priorities
+                </option>
+
+                {% for value in ["Critical", "High", "Medium", "Low"] %}
+                <option
+                    value="{{ value }}"
+                    {% if filters.priority == value %}
+                    selected
+                    {% endif %}
+                >
+                    {{ value }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="category">
+                Category
+            </label>
+
+            <select
+                id="category"
+                name="category"
+            >
+                <option value="">
+                    All Categories
+                </option>
+
+                {% for value in [
+                    "Technical Support",
+                    "Billing",
+                    "Sales Inquiry",
+                    "Feature Request",
+                    "Bug Report",
+                    "Account Access",
+                    "Refund Request",
+                    "General Inquiry"
+                ] %}
+                <option
+                    value="{{ value }}"
+                    {% if filters.category == value %}
+                    selected
+                    {% endif %}
+                >
+                    {{ value }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="assigned_team">
+                Assigned Team
+            </label>
+
+            <select
+                id="assigned_team"
+                name="assigned_team"
+            >
+                <option value="">
+                    All Teams
+                </option>
+
+                {% for value in [
+                    "Technical Support",
+                    "Finance",
+                    "Sales",
+                    "Customer Success",
+                    "Product Team"
+                ] %}
+                <option
+                    value="{{ value }}"
+                    {% if filters.assigned_team == value %}
+                    selected
+                    {% endif %}
+                >
+                    {{ value }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="limit">
+                Page Size
+            </label>
+
+            <input
+                id="limit"
+                type="number"
+                name="limit"
+                min="1"
+                max="100"
+                value="{{ result.limit }}"
+            >
+        </div>
 
         <button type="submit">
             Apply Filters
         </button>
+
+        <a
+            class="button-link"
+            href="/dashboard/tickets"
+        >
+            Clear Filters
+        </a>
     </form>
 
+    {% if
+        filters.status
+        or filters.priority
+        or filters.category
+        or filters.assigned_team
+    %}
+    <p class="active-filters">
+        <strong>Filters applied:</strong>
+
+        {% if filters.status %}
+            Status = {{ filters.status }}
+        {% endif %}
+
+        {% if filters.priority %}
+            Priority = {{ filters.priority }}
+        {% endif %}
+
+        {% if filters.category %}
+            Category = {{ filters.category }}
+        {% endif %}
+
+        {% if filters.assigned_team %}
+            Assigned Team = {{ filters.assigned_team }}
+        {% endif %}
+    </p>
+    {% endif %}
+
     <p>
-        Total Tickets:
+        Total Matching Tickets:
         <strong>{{ result.total }}</strong>
     </p>
 
@@ -153,18 +368,28 @@
         {% for ticket in result.tickets %}
         <tr>
             <td>
-                <a
-                    href="/dashboard/tickets/{{ ticket.id }}"
-                >
+                <a href="/dashboard/tickets/{{ ticket.id }}">
                     {{ ticket.ticket_number }}
                 </a>
             </td>
 
             <td>{{ ticket.email_subject }}</td>
-            <td>{{ ticket.status }}</td>
-            <td>{{ ticket.priority }}</td>
-            <td>{{ ticket.category }}</td>
-            <td>{{ ticket.assigned_team }}</td>
+
+            <td>
+                {{ ticket.status }}
+            </td>
+
+            <td>
+                {{ ticket.priority }}
+            </td>
+
+            <td>
+                {{ ticket.category }}
+            </td>
+
+            <td>
+                {{ ticket.assigned_team }}
+            </td>
 
             <td>
                 {% if ticket.confidence_score is not none %}
@@ -174,7 +399,9 @@
                 {% endif %}
             </td>
 
-            <td>{{ ticket.received_at }}</td>
+            <td>
+                {{ ticket.received_at }}
+            </td>
         </tr>
 
         {% else %}
@@ -183,7 +410,7 @@
                 colspan="8"
                 class="empty-state"
             >
-                No tickets found.
+                No tickets match the selected filters.
             </td>
         </tr>
         {% endfor %}
@@ -191,8 +418,34 @@
     </table>
 
     <div class="pagination">
-        Showing offset {{ result.offset }}
-        with limit {{ result.limit }}.
+        <span>
+            Showing offset {{ result.offset }}
+            with limit {{ result.limit }}.
+        </span>
+
+        <div class="pagination-links">
+            {% if result.offset > 0 %}
+            <a
+                class="pagination-link"
+                href="{{ request.url.include_query_params(
+                    offset=[result.offset - result.limit, 0] | max
+                ) }}"
+            >
+                Previous
+            </a>
+            {% endif %}
+
+            {% if result.offset + result.limit < result.total %}
+            <a
+                class="pagination-link"
+                href="{{ request.url.include_query_params(
+                    offset=result.offset + result.limit
+                ) }}"
+            >
+                Next
+            </a>
+            {% endif %}
+        </div>
     </div>
 </main>
 </body>

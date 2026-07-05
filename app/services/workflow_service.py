@@ -239,7 +239,7 @@ class WorkflowService:
                 self._reply_suggestion_service
                 .generate_suggestion(
                     email=email,
-                    analysis=normalized_analysis,
+                    normalized_analysis=normalized_analysis,
                 )
             )
 

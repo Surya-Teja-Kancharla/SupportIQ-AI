@@ -1,0 +1,267 @@
+{
+  "workflow_name": "SupportIQ AI Email-to-Ticket Processing Workflow",
+  "workflow_id": "supportiq-email-ticket-workflow",
+  "version": "1.0.0",
+  "description": "Defines the end-to-end SupportIQ AI workflow for ingesting unread support emails, validating parsed email data, tracking workflow execution, performing AI ticket analysis, normalizing AI output, assigning priority, routing tickets, generating reply suggestions, persisting ticket aggregates, sending acknowledgements, completing workflow telemetry, and recording failures.",
+  "entrypoint": {
+    "service": "EmailIngestionService",
+    "method": "ingest_unread_emails"
+  },
+  "transaction_model": {
+    "business_transaction_owner": "WorkflowService",
+    "business_transaction_behavior": {
+      "success": "commit",
+      "failure": "rollback"
+    },
+    "monitoring_transaction_owner": "WorkflowExecutionService",
+    "monitoring_transaction_behavior": "Workflow execution telemetry is persisted independently so monitoring and failure state can survive business transaction rollbacks."
+  },
+  "stages": [
+    {
+      "order": 1,
+      "id": "EMAIL_FETCHED",
+      "name": "Email Fetch",
+      "owner": "EmailIngestionService",
+      "operation": "Fetch unread emails from the configured IMAP mailbox.",
+      "implementation": "IMAPService.fetch_unread_emails",
+      "output": "ParsedEmail candidates",
+      "failure_behavior": "Connection and fetch failures are converted into failed ingestion results."
+    },
+    {
+      "order": 2,
+      "id": "INGESTION_VALIDATION",
+      "name": "Ingestion Validation",
+      "owner": "EmailIngestionService",
+      "operation": "Validate that the parsed email contains a non-empty Message-ID and body.",
+      "implementation": "EmailIngestionService._validate_ingested_email",
+      "output": "Validated ParsedEmail",
+      "failure_behavior": "Validation failures are returned as non-retryable failed ingestion results."
+    },
+    {
+      "order": 3,
+      "id": "EMAIL_PARSED",
+      "name": "Workflow Initialization and Email Parsed",
+      "owner": "EmailIngestionService / WorkflowService",
+      "operation": "Create or continue workflow execution telemetry and establish EMAIL_PARSED as the initial parsed-email stage.",
+      "implementation": [
+        "WorkflowExecutionService.start_execution",
+        "WorkflowExecutionService.advance_stage",
+        "WorkflowService.process_email"
+      ],
+      "output": "WorkflowExecution",
+      "failure_behavior": "Duplicate Message-ID processing is rejected when WorkflowService attempts to create a new execution for an already processed email."
+    },
+    {
+      "order": 4,
+      "id": "AI_ANALYSIS_STARTED",
+      "name": "AI Ticket Analysis Started",
+      "owner": "WorkflowService",
+      "operation": "Build TicketAnalysisRequest and invoke the configured LLM service.",
+      "implementation": [
+        "WorkflowService._build_analysis_request",
+        "LLMService.analyze_ticket"
+      ],
+      "output": "Ticket analysis response",
+      "failure_behavior": "Business transaction is rolled back and workflow failure telemetry is recorded."
+    },
+    {
+      "order": 5,
+      "id": "AI_ANALYSIS_COMPLETED",
+      "name": "AI Ticket Analysis Completed",
+      "owner": "WorkflowService",
+      "operation": "Record successful completion of AI ticket analysis.",
+      "implementation": "WorkflowExecutionService.advance_stage",
+      "output": "AI analysis result"
+    },
+    {
+      "order": 6,
+      "id": "VALIDATION_COMPLETED",
+      "name": "AI Analysis Normalization",
+      "owner": "WorkflowService",
+      "operation": "Normalize and validate the AI-generated ticket analysis.",
+      "implementation": "TicketAnalysisNormalizer.normalize",
+      "output": "NormalizedTicketAnalysis",
+      "failure_behavior": "Business transaction is rolled back and workflow failure telemetry is recorded."
+    },
+    {
+      "order": 7,
+      "id": "PRIORITY_ASSIGNED",
+      "name": "Priority Assignment",
+      "owner": "WorkflowService",
+      "operation": "Apply deterministic priority rules to the normalized ticket analysis.",
+      "implementation": "PriorityService.assign_priority",
+      "output": "PriorityDecision",
+      "failure_behavior": "Business transaction is rolled back and workflow failure telemetry is recorded."
+    },
+    {
+      "order": 8,
+      "id": "TEAM_ASSIGNED",
+      "name": "Ticket Routing",
+      "owner": "WorkflowService",
+      "operation": "Route the ticket category to the configured support team.",
+      "implementation": "RoutingService.route_ticket",
+      "output": "RoutingDecision",
+      "failure_behavior": "Unmapped categories or routing failures roll back the business transaction and record workflow failure telemetry."
+    },
+    {
+      "order": 9,
+      "id": "REPLY_SUGGESTION",
+      "name": "Reply Suggestion Generation",
+      "owner": "WorkflowService",
+      "operation": "Generate an AI-assisted customer reply suggestion from the parsed email and normalized analysis.",
+      "implementation": "ReplySuggestionService.generate_suggestion",
+      "output": "ReplySuggestionResponse",
+      "failure_behavior": "Business transaction is rolled back and workflow failure telemetry is recorded."
+    },
+    {
+      "order": 10,
+      "id": "TICKET_CREATED",
+      "name": "Ticket Aggregate Persistence",
+      "owner": "WorkflowService / TicketService",
+      "operation": "Create and persist the ticket, attachments, and initial ticket audit event.",
+      "implementation": "TicketService.create_ticket",
+      "output": "TicketCreationResult",
+      "transaction_behavior": "WorkflowService commits the business transaction after successful ticket creation.",
+      "failure_behavior": "WorkflowService rolls back the business transaction and records workflow failure telemetry."
+    },
+    {
+      "order": 11,
+      "id": "TICKET_ATTACHED",
+      "name": "Workflow Ticket Association",
+      "owner": "WorkflowService",
+      "operation": "Associate the persisted ticket identifier with the workflow execution telemetry.",
+      "implementation": "WorkflowExecutionService.attach_ticket",
+      "output": "WorkflowExecution associated with Ticket"
+    },
+    {
+      "order": 12,
+      "id": "ACKNOWLEDGEMENT_SENT",
+      "name": "Customer Acknowledgement",
+      "owner": "EmailIngestionService",
+      "operation": "Send the customer acknowledgement after successful ticket creation when acknowledgement dependencies are configured.",
+      "implementation": "AcknowledgementService.send_acknowledgement",
+      "output": "Acknowledgement delivery result",
+      "failure_behavior": "Acknowledgement failure is logged and workflow execution is marked failed when externally tracked execution telemetry is available."
+    },
+    {
+      "order": 13,
+      "id": "COMPLETED",
+      "name": "Workflow Completion",
+      "owner": "EmailIngestionService",
+      "operation": "Complete workflow execution telemetry after successful ticket processing and acknowledgement handling.",
+      "implementation": "WorkflowExecutionService.complete_execution",
+      "output": "Completed WorkflowExecution"
+    }
+  ],
+  "success_path": [
+    "EMAIL_FETCHED",
+    "INGESTION_VALIDATION",
+    "EMAIL_PARSED",
+    "AI_ANALYSIS_STARTED",
+    "AI_ANALYSIS_COMPLETED",
+    "VALIDATION_COMPLETED",
+    "PRIORITY_ASSIGNED",
+    "TEAM_ASSIGNED",
+    "REPLY_SUGGESTION",
+    "TICKET_CREATED",
+    "TICKET_ATTACHED",
+    "ACKNOWLEDGEMENT_SENT",
+    "COMPLETED"
+  ],
+  "failure_handling": {
+    "business_workflow_failure": {
+      "actions": [
+        "Rollback SQLAlchemy business transaction",
+        "Persist workflow failure telemetry",
+        "Preserve failed stage",
+        "Preserve exception information",
+        "Preserve retry count and retry exhaustion state",
+        "Re-raise the original exception"
+      ]
+    },
+    "ingestion_validation_failure": {
+      "actions": [
+        "Return FAILED EmailProcessingResult",
+        "Record VALIDATION_ERROR failure",
+        "Mark failure as non-retryable",
+        "Do not invoke WorkflowService"
+      ]
+    },
+    "imap_connection_failure": {
+      "actions": [
+        "Return failed ingestion batch result",
+        "Record CONNECTION_ERROR",
+        "Mark failure as retryable"
+      ]
+    },
+    "imap_fetch_failure": {
+      "actions": [
+        "Return failed ingestion batch result",
+        "Record FETCH_ERROR",
+        "Mark failure as retryable"
+      ]
+    },
+    "acknowledgement_failure": {
+      "actions": [
+        "Log acknowledgement delivery failure",
+        "Preserve the already committed ticket",
+        "Persist workflow execution failure telemetry when execution tracking is available"
+      ]
+    }
+  },
+  "idempotency": {
+    "key": "ParsedEmail.message_id",
+    "duplicate_detection": "WorkflowExecutionService.get_by_message_id",
+    "duplicate_behavior": "WorkflowService raises DuplicateWorkflowError before creating a duplicate workflow execution."
+  },
+  "persistence": {
+    "ticket_entities": [
+      "Ticket",
+      "TicketAttachment",
+      "TicketAuditLog"
+    ],
+    "workflow_entities": [
+      "WorkflowExecution",
+      "DeadLetterRecord"
+    ]
+  },
+  "external_integrations": [
+    {
+      "name": "IMAP Mailbox",
+      "purpose": "Unread support email ingestion"
+    },
+    {
+      "name": "Groq LLM API",
+      "purpose": "Ticket analysis and AI-assisted reply suggestion generation"
+    },
+    {
+      "name": "SMTP Server",
+      "purpose": "Customer acknowledgement delivery"
+    },
+    {
+      "name": "PostgreSQL",
+      "purpose": "Ticket, audit, attachment, workflow execution, internal note, and failure recovery persistence"
+    }
+  ],
+  "observability": {
+    "structured_logging": true,
+    "workflow_execution_tracking": true,
+    "failed_stage_tracking": true,
+    "retry_tracking": true,
+    "dead_letter_recovery": true,
+    "dashboard_monitoring": true
+  },
+  "testing": {
+    "total_tests": 452,
+    "passing_tests": 452,
+    "application_coverage_percent": 89,
+    "integration_coverage": [
+      "Email to ticket persistence workflow",
+      "Email and mocked Groq database workflow",
+      "Ticket lifecycle audit workflow",
+      "Failed workflow retry and dead-letter recovery",
+      "Acknowledgement workflow",
+      "Ticket processing workflow"
+    ]
+  }
+}

@@ -1,20 +1,918 @@
 {
-    "evaluation_name": "SupportIQ Classification Evaluation",
-    "dataset_size": 50,
-    "evaluated_samples": 50,
-    "metrics": {
-        "category_accuracy": 0.90,
-        "priority_accuracy": 0.88,
-        "routing_accuracy": 0.92
+  "dataset_name": "SupportIQ Classification Evaluation Dataset",
+  "dataset_version": "1.0",
+  "generated_at": "2026-07-05T20:46:46.313295+00:00",
+  "total_samples": 50,
+  "metrics": {
+    "category_accuracy": 1.0,
+    "priority_accuracy": 0.94,
+    "routing_accuracy": 0.76
+  },
+  "correct_counts": {
+    "category": 50,
+    "priority": 47,
+    "routing": 38
+  },
+  "sample_results": [
+    {
+      "id": "CE-001",
+      "expected": {
+        "category": "Technical Support",
+        "priority": "Critical",
+        "route": "Technical Support"
+      },
+      "actual": {
+        "category": "Technical Support",
+        "priority": "High",
+        "route": "Technical Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": false,
+        "routing": true
+      }
     },
-    "correct_predictions": {
-        "category": 45,
-        "priority": 44,
-        "routing": 46
+    {
+      "id": "CE-002",
+      "expected": {
+        "category": "Technical Support",
+        "priority": "High",
+        "route": "Technical Support"
+      },
+      "actual": {
+        "category": "Technical Support",
+        "priority": "High",
+        "route": "Technical Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
     },
-    "mismatches": {
-        "category": [],
-        "priority": [],
-        "routing": []
+    {
+      "id": "CE-003",
+      "expected": {
+        "category": "Technical Support",
+        "priority": "Medium",
+        "route": "Technical Support"
+      },
+      "actual": {
+        "category": "Technical Support",
+        "priority": "Medium",
+        "route": "Technical Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-004",
+      "expected": {
+        "category": "Technical Support",
+        "priority": "Low",
+        "route": "Technical Support"
+      },
+      "actual": {
+        "category": "Technical Support",
+        "priority": "Low",
+        "route": "Technical Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-005",
+      "expected": {
+        "category": "Technical Support",
+        "priority": "Critical",
+        "route": "Technical Support"
+      },
+      "actual": {
+        "category": "Technical Support",
+        "priority": "High",
+        "route": "Technical Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": false,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-006",
+      "expected": {
+        "category": "Billing",
+        "priority": "High",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Billing",
+        "priority": "High",
+        "route": "Finance"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-007",
+      "expected": {
+        "category": "Billing",
+        "priority": "Medium",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Billing",
+        "priority": "Medium",
+        "route": "Finance"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-008",
+      "expected": {
+        "category": "Billing",
+        "priority": "Low",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Billing",
+        "priority": "Low",
+        "route": "Finance"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-009",
+      "expected": {
+        "category": "Billing",
+        "priority": "High",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Billing",
+        "priority": "High",
+        "route": "Finance"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-010",
+      "expected": {
+        "category": "Billing",
+        "priority": "Low",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Billing",
+        "priority": "Low",
+        "route": "Finance"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-011",
+      "expected": {
+        "category": "Account Access",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Account Access",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-012",
+      "expected": {
+        "category": "Account Access",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Account Access",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-013",
+      "expected": {
+        "category": "Account Access",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Account Access",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-014",
+      "expected": {
+        "category": "Account Access",
+        "priority": "Low",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Account Access",
+        "priority": "Low",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-015",
+      "expected": {
+        "category": "Account Access",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Account Access",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-016",
+      "expected": {
+        "category": "Product Inquiry",
+        "priority": "Low",
+        "route": "Product Support"
+      },
+      "actual": {
+        "category": "Product Inquiry",
+        "priority": "Low",
+        "route": "Product Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-017",
+      "expected": {
+        "category": "Product Inquiry",
+        "priority": "Medium",
+        "route": "Product Support"
+      },
+      "actual": {
+        "category": "Product Inquiry",
+        "priority": "Medium",
+        "route": "Product Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-018",
+      "expected": {
+        "category": "Product Inquiry",
+        "priority": "Low",
+        "route": "Product Support"
+      },
+      "actual": {
+        "category": "Product Inquiry",
+        "priority": "Low",
+        "route": "Product Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-019",
+      "expected": {
+        "category": "Product Inquiry",
+        "priority": "Medium",
+        "route": "Product Support"
+      },
+      "actual": {
+        "category": "Product Inquiry",
+        "priority": "Medium",
+        "route": "Product Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-020",
+      "expected": {
+        "category": "Product Inquiry",
+        "priority": "Low",
+        "route": "Product Support"
+      },
+      "actual": {
+        "category": "Product Inquiry",
+        "priority": "Low",
+        "route": "Product Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-021",
+      "expected": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Management"
+      },
+      "actual": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Team"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-022",
+      "expected": {
+        "category": "Feature Request",
+        "priority": "Medium",
+        "route": "Product Management"
+      },
+      "actual": {
+        "category": "Feature Request",
+        "priority": "Medium",
+        "route": "Product Team"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-023",
+      "expected": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Management"
+      },
+      "actual": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Team"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-024",
+      "expected": {
+        "category": "Feature Request",
+        "priority": "Medium",
+        "route": "Product Management"
+      },
+      "actual": {
+        "category": "Feature Request",
+        "priority": "Medium",
+        "route": "Product Team"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-025",
+      "expected": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Management"
+      },
+      "actual": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Team"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-026",
+      "expected": {
+        "category": "Sales",
+        "priority": "Medium",
+        "route": "Sales"
+      },
+      "actual": {
+        "category": "Sales",
+        "priority": "Medium",
+        "route": "Sales"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-027",
+      "expected": {
+        "category": "Sales",
+        "priority": "Medium",
+        "route": "Sales"
+      },
+      "actual": {
+        "category": "Sales",
+        "priority": "Medium",
+        "route": "Sales"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-028",
+      "expected": {
+        "category": "Sales",
+        "priority": "Low",
+        "route": "Sales"
+      },
+      "actual": {
+        "category": "Sales",
+        "priority": "Low",
+        "route": "Sales"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-029",
+      "expected": {
+        "category": "Sales",
+        "priority": "High",
+        "route": "Sales"
+      },
+      "actual": {
+        "category": "Sales",
+        "priority": "High",
+        "route": "Sales"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-030",
+      "expected": {
+        "category": "Sales",
+        "priority": "Medium",
+        "route": "Sales"
+      },
+      "actual": {
+        "category": "Sales",
+        "priority": "Medium",
+        "route": "Sales"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-031",
+      "expected": {
+        "category": "Cancellation",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Cancellation",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-032",
+      "expected": {
+        "category": "Cancellation",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Cancellation",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-033",
+      "expected": {
+        "category": "Cancellation",
+        "priority": "Low",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Cancellation",
+        "priority": "Low",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-034",
+      "expected": {
+        "category": "Cancellation",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Cancellation",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-035",
+      "expected": {
+        "category": "Cancellation",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Cancellation",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-036",
+      "expected": {
+        "category": "Refund",
+        "priority": "Medium",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Refund",
+        "priority": "Medium",
+        "route": "Billing"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-037",
+      "expected": {
+        "category": "Refund",
+        "priority": "High",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Refund",
+        "priority": "High",
+        "route": "Billing"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-038",
+      "expected": {
+        "category": "Refund",
+        "priority": "Low",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Refund",
+        "priority": "Low",
+        "route": "Billing"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-039",
+      "expected": {
+        "category": "Refund",
+        "priority": "Medium",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Refund",
+        "priority": "Medium",
+        "route": "Billing"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-040",
+      "expected": {
+        "category": "Refund",
+        "priority": "High",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Refund",
+        "priority": "High",
+        "route": "Billing"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-041",
+      "expected": {
+        "category": "Complaint",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Complaint",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-042",
+      "expected": {
+        "category": "Complaint",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Complaint",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-043",
+      "expected": {
+        "category": "Complaint",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Complaint",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-044",
+      "expected": {
+        "category": "Complaint",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Complaint",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-045",
+      "expected": {
+        "category": "Complaint",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Complaint",
+        "priority": "High",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-046",
+      "expected": {
+        "category": "Technical Support",
+        "priority": "Critical",
+        "route": "Technical Support"
+      },
+      "actual": {
+        "category": "Technical Support",
+        "priority": "Medium",
+        "route": "Technical Support"
+      },
+      "correct": {
+        "category": true,
+        "priority": false,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-047",
+      "expected": {
+        "category": "Billing",
+        "priority": "Low",
+        "route": "Billing"
+      },
+      "actual": {
+        "category": "Billing",
+        "priority": "Low",
+        "route": "Finance"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-048",
+      "expected": {
+        "category": "Account Access",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "actual": {
+        "category": "Account Access",
+        "priority": "Medium",
+        "route": "Customer Success"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
+    },
+    {
+      "id": "CE-049",
+      "expected": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Management"
+      },
+      "actual": {
+        "category": "Feature Request",
+        "priority": "Low",
+        "route": "Product Team"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": false
+      }
+    },
+    {
+      "id": "CE-050",
+      "expected": {
+        "category": "Sales",
+        "priority": "High",
+        "route": "Sales"
+      },
+      "actual": {
+        "category": "Sales",
+        "priority": "High",
+        "route": "Sales"
+      },
+      "correct": {
+        "category": true,
+        "priority": true,
+        "routing": true
+      }
     }
+  ]
 }

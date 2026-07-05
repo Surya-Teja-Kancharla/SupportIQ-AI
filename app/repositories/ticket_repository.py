@@ -16,7 +16,7 @@ from app.models.ticket import Ticket
 class TicketRepository:
     """Persistence operations for tickets."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session | None = None) -> None:
         self._session = session
 
     def add(self, ticket: Ticket) -> Ticket:
@@ -37,12 +37,21 @@ class TicketRepository:
                 "Ticket persistence failed."
             ) from exc
 
+    def create(self, ticket: Ticket) -> Ticket:
+        return self.add(ticket)
+
     def get_by_id(
         self,
-        ticket_id: int,
+        *args,
     ) -> Ticket | None:
         try:
-            return self._session.get(Ticket, ticket_id)
+            if len(args) == 2:
+                session, ticket_id = args
+            else:
+                session = self._session
+                ticket_id = args[0]
+
+            return session.get(Ticket, ticket_id)
 
         except SQLAlchemyError as exc:
             raise RepositoryError(

@@ -9,6 +9,7 @@ from app.repositories import (
     AuditRepository,
     TicketRepository,
 )
+from app.core.constants import TicketStatus
 from app.schemas.email_schema import ParsedEmail
 from app.schemas.normalized_ticket_schema import NormalizedTicketAnalysis
 from app.schemas.ticket_decision_schema import (
@@ -98,7 +99,7 @@ class TicketService:
             assigned_team=routing_decision.assigned_team,
             confidence_score=analysis.confidence_score,
             suggested_reply=reply_suggestion.suggested_reply,
-            status="Open",
+            status=TicketStatus.OPEN,
             received_at=email.received_at,
         )
 

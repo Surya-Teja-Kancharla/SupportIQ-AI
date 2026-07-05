@@ -1,19 +1,21 @@
 from sqlalchemy.orm import Session
 
+from app.core.constants import AuditAction
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.internal_note_repository import InternalNoteRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.services.reply_suggestion_service import ReplySuggestionService
+from app.services.ticket_lifecycle_service import TicketLifecycleService
 
 
 class ManualReviewService:
-    CATEGORY_CHANGED = "CATEGORY_CHANGED"
-    PRIORITY_CHANGED = "PRIORITY_CHANGED"
-    TEAM_REASSIGNED = "TEAM_REASSIGNED"
-    STATUS_CHANGED = "STATUS_CHANGED"
-    INTERNAL_NOTE_ADDED = "INTERNAL_NOTE_ADDED"
-    SUGGESTED_REPLY_EDITED = "SUGGESTED_REPLY_EDITED"
-    SUGGESTED_REPLY_REGENERATED = "SUGGESTED_REPLY_REGENERATED"
+    CATEGORY_CHANGED = AuditAction.CATEGORY_CHANGED
+    PRIORITY_CHANGED = AuditAction.PRIORITY_CHANGED
+    TEAM_REASSIGNED = AuditAction.TEAM_REASSIGNED
+    STATUS_CHANGED = AuditAction.STATUS_CHANGED
+    INTERNAL_NOTE_ADDED = AuditAction.INTERNAL_NOTE_ADDED
+    SUGGESTED_REPLY_EDITED = AuditAction.SUGGESTED_REPLY_EDITED
+    SUGGESTED_REPLY_REGENERATED = AuditAction.SUGGESTED_REPLY_REGENERATED
 
     def __init__(
         self,
@@ -21,11 +23,16 @@ class ManualReviewService:
         audit_repository: AuditRepository | None = None,
         internal_note_repository: InternalNoteRepository | None = None,
         reply_suggestion_service: ReplySuggestionService | None = None,
+        ticket_lifecycle_service: TicketLifecycleService | None = None,
     ) -> None:
         self.ticket_repository = ticket_repository
         self.audit_repository = audit_repository
         self.internal_note_repository = internal_note_repository
         self.reply_suggestion_service = reply_suggestion_service
+        self.ticket_lifecycle_service = ticket_lifecycle_service or TicketLifecycleService(
+            ticket_repository=ticket_repository,
+            audit_repository=audit_repository,
+        )
 
     def _get_ticket_repository(self) -> TicketRepository:
         if self.ticket_repository is None:
@@ -58,6 +65,9 @@ class ManualReviewService:
             )
 
         return self.reply_suggestion_service
+
+    def _get_ticket_lifecycle_service(self) -> TicketLifecycleService:
+        return self.ticket_lifecycle_service
 
     def _get_ticket_or_raise(
         self,
@@ -175,14 +185,17 @@ class ManualReviewService:
         status: str,
         performed_by: str,
     ):
-        return self._update_field(
+        ticket = self._get_ticket_lifecycle_service().transition(
             db,
             ticket_id=ticket_id,
-            field_name="status",
-            new_value=status,
-            action=self.STATUS_CHANGED,
+            target_status=status,
             performed_by=performed_by,
         )
+
+        db.commit()
+        db.refresh(ticket)
+
+        return ticket
 
     def edit_suggested_reply(
         self,
@@ -268,7 +281,7 @@ class ManualReviewService:
 
             ticket.suggested_reply = new_reply
 
-            self.audit_repository.create(
+            self._get_audit_repository().create(
                 db,
                 ticket_id=ticket.id,
                 action=self.SUGGESTED_REPLY_REGENERATED,

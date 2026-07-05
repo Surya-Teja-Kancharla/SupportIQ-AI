@@ -11,6 +11,7 @@ from app.schemas.manual_review_schema import (
     SuggestedReplyUpdateRequest,
     TeamReassignmentRequest,
 )
+from app.core.exceptions import InvalidTicketTransitionError
 from app.services.manual_review_service import ManualReviewService
 
 

@@ -1,23 +1,28 @@
 # SupportIQ AI
 
-**SupportIQ AI** is an AI-powered customer support ticket automation system designed to ingest customer support emails, analyze unstructured support requests, classify issues, assign priorities, route tickets to appropriate teams, and maintain a complete support ticket lifecycle.
+**SupportIQ AI** is an AI-powered customer support ticket automation system designed to ingest customer support emails, analyze unstructured support requests, classify issues, assign priorities, route tickets to appropriate teams, persist ticket data, send customer acknowledgements, and maintain a complete support ticket lifecycle.
 
 The project is being developed as part of the **Anthrasync AI Engineer Hiring Process – Round 3 Technical Assignment (Task 4: AI Customer Support Ticket Automation)**.
 
-The system is designed with a production-oriented, modular architecture emphasizing:
+The system follows a production-oriented modular monolith architecture emphasizing:
 
 * Maintainability
 * Separation of concerns
+* Explicit service boundaries
 * Secure configuration management
-* Reliable email ingestion
+* Reliable inbound email processing
+* Reusable outbound email transport
 * Structured data validation
-* Resilience and error handling
+* Centralized exception handling
+* Structured observability
+* Retry and resilience infrastructure
+* Independent batch-item processing
 * Testability
 * Scalability
 * Auditability
 * Security and data privacy
 
-> **Current Development Status:** Hours 1–2 completed — project foundation, PostgreSQL database schema, centralized configuration, secure IMAP email ingestion, MIME email parsing, attachment validation/storage, manual integration testing, and automated unit testing.
+> **Current Development Status:** Hours 1–3 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation/storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, manual Gmail integration testing, and 36 passing automated tests.
 
 ---
 
@@ -32,12 +37,18 @@ The system is designed with a production-oriented, modular architecture emphasiz
 * [Project Architecture](#project-architecture)
 * [Project Structure](#project-structure)
 * [Database Design](#database-design)
-* [Email Ingestion Architecture](#email-ingestion-architecture)
+* [Email Infrastructure Architecture](#email-infrastructure-architecture)
+* [Email Ingestion Orchestration](#email-ingestion-orchestration)
+* [SMTP Transport](#smtp-transport)
+* [Exception Architecture](#exception-architecture)
+* [Retry Infrastructure](#retry-infrastructure)
+* [Structured Logging](#structured-logging)
 * [Attachment Security](#attachment-security)
 * [Configuration Management](#configuration-management)
 * [Environment Variables](#environment-variables)
 * [Installation and Setup](#installation-and-setup)
 * [Running the IMAP Integration Test](#running-the-imap-integration-test)
+* [Running the SMTP Integration Test](#running-the-smtp-integration-test)
 * [Running Automated Tests](#running-automated-tests)
 * [Test Coverage](#test-coverage)
 * [Current Limitations](#current-limitations)
@@ -56,25 +67,27 @@ SupportIQ AI aims to automate the initial triage and management of customer supp
 The completed system will:
 
 1. Monitor a support inbox for incoming customer emails.
-2. Extract sender metadata, email content, timestamps, and attachments.
-3. Analyze support requests using a Large Language Model.
-4. Generate structured ticket information.
-5. Validate and normalize AI-generated output.
-6. Classify customer issues.
-7. Determine ticket priority using AI recommendations and deterministic business rules.
-8. Route tickets to appropriate support teams.
-9. Persist tickets and related data in PostgreSQL.
-10. Automatically acknowledge customer requests through email.
-11. Allow support agents to review and modify AI-generated decisions.
-12. Maintain a complete ticket lifecycle.
-13. Record ticket changes in an audit trail.
-14. Handle failures, retries, malformed AI responses, duplicate processing, and other workflow edge cases.
+2. Extract sender metadata, email content, timestamps, Message-ID values, and attachments.
+3. Validate inbound email contracts.
+4. Analyze support requests using a Large Language Model.
+5. Generate structured ticket information.
+6. Validate and normalize AI-generated output.
+7. Classify customer issues.
+8. Determine ticket priority using AI recommendations and deterministic business rules.
+9. Route tickets to appropriate support teams.
+10. Persist tickets and related data in PostgreSQL.
+11. Automatically acknowledge customer requests through email.
+12. Allow support agents to review and modify AI-generated decisions.
+13. Maintain a complete ticket lifecycle.
+14. Record ticket changes in an audit trail.
+15. Handle failures, retries, malformed AI responses, duplicate processing, and workflow edge cases.
+16. Emit machine-readable operational logs for observability and debugging.
 
 ---
 
 ## Business Scenario
 
-Customer support teams may receive hundreds of support requests through email.
+Customer support teams may receive hundreds or thousands of support requests through email.
 
 Support agents traditionally perform several repetitive tasks manually:
 
@@ -102,10 +115,7 @@ Customer Email
 Support Inbox
       │
       ▼
-IMAP Inbox Monitor
-      │
-      ▼
-Email Metadata Extraction
+IMAP Transport
       │
       ▼
 MIME Email Parser
@@ -120,6 +130,15 @@ MIME Email Parser
       │
       ▼
 Attachment Validation and Storage
+      │
+      ▼
+Email Ingestion Orchestration
+      │
+      ├── Contract Validation
+      ├── Per-Message Failure Isolation
+      ├── Processing Result Construction
+      ├── Batch Metrics
+      └── Structured Logging
       │
       ▼
 LLM Ticket Analysis
@@ -146,7 +165,7 @@ PostgreSQL Ticket Creation
       └── Internal Notes
       │
       ▼
-Customer Acknowledgement Email
+SMTP Customer Acknowledgement
       │
       ▼
 Manual Agent Review
@@ -166,7 +185,7 @@ Complete Audit Trail
 
 Completed:
 
-* Product name selected: **SupportIQ AI**
+* Product name selected: **SupportIQ AI**.
 * Git repository initialized.
 * Python virtual environment created.
 * Required Python dependencies installed.
@@ -188,7 +207,7 @@ Completed:
 * Environment variable loading through Pydantic Settings.
 * Gmail IMAP SSL connection.
 * Support inbox authentication using a Google App Password.
-* Configurable mailbox folder selection.
+* Configurable mailbox selection.
 * Detection of unread emails using IMAP `UNSEEN`.
 * Non-destructive email retrieval using `BODY.PEEK[]`.
 * MIME header decoding.
@@ -198,7 +217,7 @@ Completed:
 * Message-ID extraction.
 * Email timestamp parsing.
 * Plain-text email body extraction.
-* HTML email body fallback and conversion to text.
+* HTML email fallback and conversion to text.
 * Multipart email processing.
 * Attachment detection.
 * Attachment filename decoding.
@@ -212,20 +231,67 @@ Completed:
 * Automated unit tests.
 * Test coverage reporting.
 
+### Hour 3 — Email Infrastructure, Orchestration, Resilience, and Observability
+
+Completed:
+
+* Centralized application-specific exception hierarchy.
+* Email transport exception taxonomy.
+* IMAP connection, authentication, mailbox, and fetch exceptions.
+* SMTP connection, authentication, and delivery exceptions.
+* Attachment exception hierarchy.
+* Retry exhaustion exception support.
+* Machine-readable JSON logging formatter.
+* Console logging.
+* Application log file output.
+* Dedicated error log output.
+* Structured event vocabulary.
+* Context-rich logging helper.
+* Generic reusable retry policy.
+* Exponential backoff calculation.
+* Configurable maximum retry attempts.
+* Maximum delay enforcement.
+* Jitter support.
+* Dependency injection for deterministic retry testing.
+* Retry exhaustion handling.
+* SMTP outbound email schemas.
+* SMTP delivery result schemas.
+* Multipart plain-text and HTML email construction.
+* Message-ID generation.
+* SMTP STARTTLS support.
+* SMTP authentication.
+* Recipient-refusal detection.
+* SMTP exception translation.
+* Real Gmail SMTP delivery verification.
+* Ingestion failure schemas.
+* Per-message processing result schemas.
+* Batch ingestion result schemas.
+* Batch success-rate calculation support.
+* Email ingestion orchestration service.
+* Inbound email contract validation.
+* Empty Message-ID validation.
+* Empty-body validation.
+* Per-message failure isolation.
+* Batch success/failure/skipped counters.
+* Guaranteed IMAP disconnect attempts.
+* IMAP service refactored to application-specific exceptions.
+* Non-destructive email fetching preserved after refactoring.
+* Real Gmail IMAP regression verification.
+* Retry utility unit tests.
+* SMTP service unit tests.
+* Email ingestion orchestration unit tests.
+* Full regression suite verification.
+* Application-wide coverage measurement.
+
 ### Automated Testing Status
 
 ```text
-20 tests passed
-1 dependency deprecation warning
-87% total coverage across tested ingestion modules
+36 tests passed
+1 third-party dependency deprecation warning
+77% application-wide statement coverage
 ```
 
-Module coverage:
-
-```text
-attachment_service.py    100%
-email_parser.py           83%
-```
+The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
 
 ---
 
@@ -235,17 +301,13 @@ email_parser.py           83%
 
 Application configuration is loaded from environment variables using `pydantic-settings`.
 
-All services consume application settings through a centralized configuration module instead of accessing environment variables independently.
+All services consume settings through a centralized configuration module instead of independently accessing environment variables.
 
 ### Secure IMAP Connection
 
-SupportIQ AI connects to Gmail using:
+SupportIQ AI connects to Gmail using IMAP over SSL.
 
-```text
-IMAP over SSL
-```
-
-Authentication is performed using a Google App Password rather than the user's normal Google account password.
+Authentication uses a Google App Password instead of the normal Google account password.
 
 ### Unread Email Detection
 
@@ -265,32 +327,27 @@ Messages are fetched using:
 BODY.PEEK[]
 ```
 
-This prevents the application from automatically marking messages as read during retrieval.
+This prevents retrieval from automatically marking messages as read.
 
-Emails will be explicitly marked as processed only after the complete processing workflow succeeds.
+Emails will be explicitly marked as processed only after the complete downstream processing boundary succeeds.
 
-### MIME Header Decoding
+### MIME Email Parsing
 
-Encoded email headers are decoded safely.
+The parser supports:
 
-This supports:
+* Plain-text messages.
+* HTML messages.
+* Multipart messages.
+* MIME-encoded headers.
+* UTF-8 headers.
+* Sender extraction.
+* Subject extraction.
+* Message-ID extraction.
+* Timestamp parsing.
+* Plain-text preference when both plain text and HTML are available.
+* HTML-to-text fallback.
 
-* Plain ASCII headers
-* UTF-8 encoded headers
-* MIME encoded-word headers
-* International characters
-
-### Email Body Extraction
-
-The email parser supports:
-
-* Plain-text messages
-* HTML messages
-* Multipart messages
-* Plain-text preference when both plain text and HTML versions exist
-* HTML-to-text fallback using BeautifulSoup
-
-### Attachment Processing
+### Secure Attachment Processing
 
 Attachments are:
 
@@ -301,42 +358,159 @@ Attachments are:
 5. Checked against the configured extension allowlist.
 6. Checked against the configured maximum size.
 7. Assigned collision-resistant filenames.
-8. Stored under the configured runtime upload directory.
+8. Stored under the configured upload directory.
 9. Returned as structured attachment metadata.
 
-### Structured Data Models
+### Email Ingestion Orchestration
 
-Pydantic schemas are used to represent:
+The `EmailIngestionService` acts as the application-level coordination boundary for inbound email processing.
 
-* Parsed emails
-* Parsed attachments
+Responsibilities include:
+
+* Establishing the IMAP connection.
+* Retrieving unread parsed emails.
+* Validating inbound email contracts.
+* Processing messages independently.
+* Preventing one malformed message from terminating the entire batch.
+* Classifying processing failures.
+* Creating structured processing results.
+* Maintaining batch-level processing counters.
+* Recording completion timestamps.
+* Attempting IMAP cleanup through a `finally` boundary.
+
+### SMTP Transport
+
+The `SMTPService` provides reusable outbound email delivery infrastructure.
+
+Implemented capabilities include:
+
+* Plain-text email delivery.
+* HTML alternative bodies.
+* Multipart email generation.
+* Message-ID generation.
+* Date header generation.
+* Optional Reply-To support.
+* STARTTLS encryption.
+* SMTP authentication.
+* Recipient-refusal detection.
+* Application-specific exception translation.
+* Structured send-start, send-success, and send-failure events.
+* Structured delivery results.
+
+The SMTP service is currently infrastructure only.
+
+Automatic ticket acknowledgement is intentionally deferred until ticket IDs, AI-generated summaries, database persistence, and workflow transaction boundaries are implemented.
+
+### Centralized Exception Handling
+
+All application-specific failures inherit from:
+
+```text
+SupportIQError
+```
+
+Current hierarchy:
+
+```text
+SupportIQError
+│
+├── ConfigurationError
+│
+├── EmailError
+│   │
+│   ├── EmailConnectionError
+│   ├── EmailAuthenticationError
+│   ├── MailboxSelectionError
+│   ├── EmailFetchError
+│   ├── EmailParsingError
+│   │   └── InvalidSenderError
+│   │
+│   ├── AttachmentError
+│   │   ├── AttachmentValidationError
+│   │   └── AttachmentStorageError
+│   │
+│   └── SMTPError
+│       ├── SMTPConnectionError
+│       ├── SMTPAuthenticationError
+│       └── SMTPSendError
+│
+├── RetryableError
+│
+└── RetryExhaustedError
+```
+
+The hierarchy prevents infrastructure-specific exceptions from leaking across application boundaries.
+
+### Retry Infrastructure
+
+SupportIQ AI includes a generic retry executor designed for reusable transient-failure handling.
+
+Implemented capabilities:
+
+* Configurable maximum attempts.
+* Configurable initial delay.
+* Exponential backoff.
+* Maximum delay enforcement.
+* Random jitter.
+* Exception-type filtering.
+* Retry scheduling events.
+* Retry exhaustion events.
+* Exception chaining.
+* Dependency injection for sleep and random functions.
+* Deterministic unit testing.
+
+Current boundary:
+
+The retry executor is implemented and tested but is not yet automatically invoked by the IMAP and SMTP transport services.
+
+Transport-level retry integration will be added at an orchestration boundary to avoid retrying permanent failures such as authentication errors, validation failures, and rejected recipients.
+
+### Structured Logging
+
+SupportIQ AI emits machine-readable JSON logs.
+
+Example:
+
+```json
+{
+  "timestamp": "2026-07-05T07:33:42.344287+00:00",
+  "level": "INFO",
+  "logger": "app.services.smtp_service",
+  "message": "SMTP email delivery succeeded.",
+  "event": "smtp_send_succeeded",
+  "recipient": "customer@example.com",
+  "message_id": "<generated-message-id@example.com>"
+}
+```
+
+Logging infrastructure includes:
+
+* UTC timestamps.
+* Log levels.
+* Logger names.
+* Event names.
+* Human-readable messages.
+* Context fields.
+* Exception serialization.
+* Console output.
+* Application log output.
+* Dedicated error log output.
+
+Logs must not contain credentials, API keys, database passwords, or Google App Passwords.
+
+### Structured Data Contracts
+
+Pydantic schemas currently represent:
+
+* Parsed attachments.
+* Parsed emails.
+* Outbound emails.
+* Email delivery results.
+* Ingestion failures.
+* Per-message processing results.
+* Batch ingestion results.
 
 These models establish validated contracts between application layers.
-
-### Automated Testing
-
-The implemented email ingestion components include automated tests covering:
-
-* Directory traversal prevention.
-* Unsafe filename replacement.
-* Preservation of valid filename characters.
-* Successful attachment storage.
-* Rejection of unsupported attachment extensions.
-* Rejection of filenames without extensions.
-* Rejection of oversized attachments.
-* Unique stored filename generation.
-* Missing MIME header handling.
-* UTF-8 MIME header decoding.
-* Plain-text MIME headers.
-* Plain-text email extraction.
-* Plain-text preference over HTML.
-* HTML-to-text fallback.
-* Unsupported body handling.
-* Valid email date parsing.
-* Missing email date fallback.
-* Malformed email date fallback.
-* Required email metadata extraction.
-* Missing subject fallback.
 
 ---
 
@@ -355,7 +529,7 @@ The implemented email ingestion components include automated tests covering:
 Planned:
 
 * Groq API
-* Llama-based instruction model
+* Llama 3.3 70B Versatile
 
 ### Database
 
@@ -366,14 +540,25 @@ Planned:
 ### Email Integration
 
 * Python `imaplib`
-* Python `email`
-* SMTP integration planned for acknowledgement emails
+* Python `smtplib`
+* Python standard library `email`
+* Gmail IMAP
+* Gmail SMTP
 
 ### Email Parsing
 
 * Python standard library email package
 * BeautifulSoup
 * lxml
+
+### Resilience and Observability
+
+* Application-specific exception hierarchy
+* Generic retry executor
+* Exponential backoff
+* Jitter support
+* Python standard-library logging
+* Structured JSON logs
 
 ### Scheduling
 
@@ -385,45 +570,58 @@ Planned:
 
 * pytest
 * pytest-cov
-
-### Logging
-
-Planned:
-
-* Loguru
-* Structured application logging
+* `unittest.mock`
 
 ---
 
 ## Project Architecture
 
-SupportIQ AI follows a layered architecture.
+SupportIQ AI follows a production-oriented modular monolith architecture.
 
 ```text
-API Layer
-    │
-    ▼
+External Interfaces
+        │
+        ├── Gmail IMAP
+        ├── Gmail SMTP
+        ├── REST API
+        └── Agent Dashboard
+        │
+        ▼
 Application / Orchestration Layer
-    │
-    ▼
+        │
+        ├── Email Ingestion Service
+        ├── Ticket Processing Workflow
+        └── Ticket Lifecycle Services
+        │
+        ▼
 Domain Services
-    │
-    ├── Email Ingestion
-    ├── LLM Analysis
-    ├── Validation
-    ├── Priority Assignment
-    ├── Routing
-    ├── Ticket Management
-    └── Acknowledgement
-    │
-    ▼
+        │
+        ├── Email Parsing
+        ├── Attachment Processing
+        ├── LLM Analysis
+        ├── Validation
+        ├── Priority Assignment
+        ├── Routing
+        └── Acknowledgement Generation
+        │
+        ▼
 Repository / Persistence Layer
-    │
-    ▼
+        │
+        ▼
 PostgreSQL
 ```
 
-The application is structured to minimize coupling between infrastructure providers and business logic.
+Cross-cutting infrastructure:
+
+```text
+                    Application Components
+                              │
+          ┌───────────────────┼───────────────────┐
+          ▼                   ▼                   ▼
+ Exception Hierarchy    Structured Logging    Retry Executor
+```
+
+The architecture minimizes coupling between external infrastructure providers and business logic.
 
 For example:
 
@@ -431,13 +629,16 @@ For example:
 Groq API
     │
     ▼
-LLM Service
+Groq Client
+    │
+    ▼
+LLM Service Boundary
     │
     ▼
 Ticket Analysis Workflow
 ```
 
-The rest of the application will depend on an LLM service abstraction rather than directly coupling business logic to a specific AI provider.
+The application will depend on an LLM service abstraction rather than coupling the complete workflow directly to Groq.
 
 ---
 
@@ -451,43 +652,62 @@ SupportIQ-AI/
 ├── README.md
 ├── app/
 │   ├── api/
+│   │   └── __init__.py
 │   ├── config/
 │   │   ├── __init__.py
 │   │   └── settings.py
 │   ├── core/
+│   │   ├── __init__.py
+│   │   ├── constants.py
+│   │   ├── exceptions.py
+│   │   ├── logging.py
+│   │   └── retry.py
 │   ├── database/
-│   │   ├── schema.sql
+│   │   └── schema.sql
 │   ├── models/
+│   │   └── __init__.py
 │   ├── prompts/
+│   │   └── __init__.py
 │   ├── scheduler/
+│   │   └── __init__.py
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   └── email_schema.py
+│   │   ├── email_schema.py
+│   │   ├── ingestion_schema.py
+│   │   └── smtp_schema.py
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── attachment_service.py
+│   │   ├── email_ingestion_service.py
 │   │   ├── email_parser.py
-│   │   └── imap_service.py
+│   │   ├── imap_service.py
+│   │   └── smtp_service.py
 │   └── utils/
+│       └── __init__.py
 ├── docs/
 ├── folder_structure.txt
 ├── logs/
 ├── main.py
+├── pytest.ini
 ├── requirements.txt
 ├── sample_data/
 ├── structure.py
 ├── tests/
 │   ├── __init__.py
 │   ├── manual_test_imap.py
+│   ├── manual_test_smtp.py
 │   ├── test_attachment_service.py
-│   └── test_email_parser.py
+│   ├── test_email_ingestion_service.py
+│   ├── test_email_parser.py
+│   ├── test_retry.py
+│   └── test_smtp_service.py
 ├── uploads/
 │   ├── attachments/
 │   └── emails/
 └── workflow/
 ```
 
-Runtime-generated attachments, logs, secrets, virtual environments, Python cache files, and other local artifacts are excluded from version control.
+Runtime-generated attachments, logs, secrets, virtual environments, Python cache files, test caches, coverage artifacts, and local customer data should be excluded from version control.
 
 ---
 
@@ -507,31 +727,29 @@ Stores the primary customer support ticket.
 
 Fields include:
 
-* Internal database ID
-* Unique ticket number
-* Customer name
-* Company
-* Sender email
-* Email subject
-* Original email body
-* AI-generated issue summary
-* Detailed description
-* Category
-* Priority
-* Sentiment
-* Product or service
-* Suggested department
-* Assigned team
-* Confidence score
-* Ticket status
-* Received timestamp
-* Updated timestamp
+* Internal database ID.
+* Unique ticket number.
+* Customer name.
+* Company.
+* Sender email.
+* Email subject.
+* Original email body.
+* AI-generated issue summary.
+* Detailed description.
+* Category.
+* Priority.
+* Sentiment.
+* Product or service.
+* Suggested department.
+* Assigned team.
+* Confidence score.
+* Ticket status.
+* Received timestamp.
+* Updated timestamp.
 
 ### `attachments`
 
 Stores attachment metadata associated with tickets.
-
-Relationship:
 
 ```text
 Ticket 1 ──────── * Attachments
@@ -540,8 +758,6 @@ Ticket 1 ──────── * Attachments
 ### `tags`
 
 Stores normalized ticket tags.
-
-Relationship:
 
 ```text
 Ticket 1 ──────── * Tags
@@ -555,15 +771,13 @@ Stores historical ticket actions and changes.
 
 Examples:
 
-* Ticket created
-* Category changed
-* Priority changed
-* Assigned team changed
-* Status changed
-* Ticket resolved
-* Ticket closed
-
-Relationship:
+* Ticket created.
+* Category changed.
+* Priority changed.
+* Assigned team changed.
+* Status changed.
+* Ticket resolved.
+* Ticket closed.
 
 ```text
 Ticket 1 ──────── * Audit Logs
@@ -572,8 +786,6 @@ Ticket 1 ──────── * Audit Logs
 ### `internal_notes`
 
 Stores support-agent comments that are not visible to customers.
-
-Relationship:
 
 ```text
 Ticket 1 ──────── * Internal Notes
@@ -588,63 +800,248 @@ Ticket 1 ──────── * Internal Notes
           │               │               │
           ▼               ▼               ▼
     attachments          tags        audit_logs
+
                           │
                           ▼
                    internal_notes
 ```
 
-Foreign keys use cascading deletion for dependent ticket records.
-
 Database indexes are defined for frequently queried fields such as:
 
-* Ticket status
-* Priority
-* Category
-* Sender email
-* Received timestamp
+* Ticket status.
+* Priority.
+* Category.
+* Sender email.
+* Received timestamp.
 
 ---
 
-## Email Ingestion Architecture
+## Email Infrastructure Architecture
 
-The implemented ingestion pipeline currently operates as follows:
+The implemented email infrastructure currently operates as follows:
 
 ```text
-Gmail Support Inbox
-        │
-        ▼
-IMAP4_SSL Connection
-        │
-        ▼
-Authenticate with App Password
-        │
-        ▼
-Select Configured Mailbox
-        │
-        ▼
-Search UNSEEN Messages
-        │
-        ▼
-Fetch using BODY.PEEK[]
-        │
-        ▼
-Parse Raw MIME Message
-        │
-        ├── Decode Headers
-        ├── Parse Sender
-        ├── Parse Subject
-        ├── Parse Message-ID
-        ├── Parse Timestamp
-        ├── Extract Body
-        └── Process Attachments
-        │
-        ▼
-Return Validated ParsedEmail Object
+                        Gmail
+                          │
+             ┌────────────┴────────────┐
+             ▼                         ▼
+        IMAP Transport            SMTP Transport
+             │                         │
+             ▼                         ▼
+       MIME Email Parser        OutboundEmail Schema
+             │                         │
+             ▼                         ▼
+     Attachment Processing       Message Construction
+             │                         │
+             ▼                         ▼
+     ParsedEmail Contract        STARTTLS + Authentication
+             │                         │
+             ▼                         ▼
+   EmailIngestionService       EmailDeliveryResult
+             │
+             ▼
+     IngestionBatchResult
 ```
 
 Emails are intentionally not marked as read during retrieval.
 
-The final workflow will explicitly mark messages as processed only after the configured processing boundary succeeds.
+The final workflow will explicitly update email processing state only after reaching the defined success boundary.
+
+---
+
+## Email Ingestion Orchestration
+
+The ingestion orchestration pipeline currently operates as follows:
+
+```text
+EmailIngestionService
+        │
+        ▼
+Connect to IMAP
+        │
+        ▼
+Fetch Unread Emails
+        │
+        ▼
+Process Each Message Independently
+        │
+        ├── Validate Message-ID
+        ├── Validate Body
+        ├── Record Structured Failure
+        └── Record Structured Success
+        │
+        ▼
+Aggregate Batch Metrics
+        │
+        ├── Total Messages
+        ├── Successful Messages
+        ├── Failed Messages
+        └── Skipped Messages
+        │
+        ▼
+Attempt IMAP Disconnect
+        │
+        ▼
+Return IngestionBatchResult
+```
+
+A malformed message does not terminate processing of all other messages in the batch.
+
+This establishes the application orchestration boundary that will later coordinate:
+
+```text
+Email
+  ↓
+LLM Analysis
+  ↓
+Validation
+  ↓
+Priority Assignment
+  ↓
+Routing
+  ↓
+Database Transaction
+  ↓
+Acknowledgement
+  ↓
+Mark Email as Processed
+```
+
+---
+
+## SMTP Transport
+
+SupportIQ AI sends outbound emails through Gmail SMTP using:
+
+```text
+smtp.gmail.com:587
+```
+
+Transport security:
+
+```text
+SMTP
+  ↓
+EHLO
+  ↓
+STARTTLS
+  ↓
+TLS Context
+  ↓
+EHLO
+  ↓
+Authentication
+  ↓
+Message Delivery
+```
+
+Real SMTP delivery has been manually verified using the configured support account and an actual recipient mailbox.
+
+The received message successfully rendered the HTML alternative body.
+
+Automatic customer acknowledgements are not yet enabled because the complete ticket-processing transaction boundary has not been implemented.
+
+---
+
+## Exception Architecture
+
+Infrastructure-specific failures are translated into application-specific exceptions.
+
+Example:
+
+```text
+smtplib.SMTPAuthenticationError
+              │
+              ▼
+SMTPAuthenticationError
+              │
+              ▼
+Application Orchestration Layer
+```
+
+This design provides:
+
+* Stable application contracts.
+* Reduced infrastructure coupling.
+* Explicit failure categories.
+* Easier retry decisions.
+* Easier API error translation.
+* Improved unit testing.
+* Better operational observability.
+
+---
+
+## Retry Infrastructure
+
+The retry subsystem uses a configurable policy and generic executor.
+
+Example backoff progression:
+
+```text
+Attempt 1 fails
+      │
+      ▼
+Initial Delay + Jitter
+      │
+      ▼
+Attempt 2 fails
+      │
+      ▼
+Initial Delay × Exponential Base + Jitter
+      │
+      ▼
+Attempt 3 fails
+      │
+      ▼
+RetryExhaustedError
+```
+
+Only configured exception types are retried.
+
+Permanent failures should not be retried.
+
+Examples of permanent failures:
+
+* Invalid credentials.
+* Invalid customer input.
+* Unsupported attachments.
+* AI schema validation failures after repair limits are exhausted.
+* SMTP recipient rejection.
+
+Examples of potentially transient failures:
+
+* Connection timeouts.
+* Temporary network failures.
+* Provider rate limits.
+* Temporary Groq service failures.
+* Temporary database connectivity failures.
+
+---
+
+## Structured Logging
+
+Logging is configured centrally in:
+
+```text
+app/core/logging.py
+```
+
+Current destinations:
+
+```text
+Console
+logs/supportiq.log
+logs/errors.log
+```
+
+Structured logs improve:
+
+* Failure investigation.
+* Event correlation.
+* Automated log processing.
+* Future metrics extraction.
+* Demo visibility.
+* Production readiness.
 
 ---
 
@@ -652,13 +1049,9 @@ The final workflow will explicitly mark messages as processed only after the con
 
 Incoming email attachments are treated as untrusted input.
 
-The current attachment-processing service implements several defensive controls.
-
 ### Filename Sanitization
 
-Directory path components are removed.
-
-Unsafe characters are replaced.
+Directory path components are removed and unsafe characters are replaced.
 
 Example:
 
@@ -674,29 +1067,17 @@ error_image.png
 
 Only configured attachment extensions are accepted.
 
-Default:
+Example configuration:
 
 ```text
 pdf,png,jpg,jpeg,txt,docx
 ```
 
-Examples:
-
-```text
-error.png       → accepted
-invoice.pdf     → accepted
-logs.txt        → accepted
-
-malware.exe     → rejected
-script.bat      → rejected
-payload.cmd     → rejected
-```
-
 ### Maximum Attachment Size
 
-Attachments exceeding the configured size limit are rejected.
+Attachments exceeding the configured maximum size are rejected.
 
-Default:
+Example default:
 
 ```text
 10 MB
@@ -706,19 +1087,9 @@ Default:
 
 Accepted attachments are assigned UUID-based stored filenames to reduce collision risk.
 
-Example:
-
-```text
-Error.png
-
-↓
-
-fffef70466d74063a395b69497e0ab07_Error.png
-```
-
 ### Runtime Storage Exclusion
 
-The runtime attachment directory is excluded from Git to prevent customer data and test artifacts from being accidentally committed.
+Runtime attachment directories should be excluded from Git to prevent customer data and test artifacts from being committed.
 
 ---
 
@@ -781,7 +1152,7 @@ LLM_MAX_RETRIES=3
 
 Never commit `.env`.
 
-The repository contains `.env_example` with placeholders for required configuration.
+The repository should contain `.env_example` with placeholders only.
 
 ---
 
@@ -790,13 +1161,11 @@ The repository contains `.env_example` with placeholders for required configurat
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Surya-Teja-Kancharla/SupportIQ-AI
+git clone <repository-url>
 cd SupportIQ-AI
 ```
 
 ### 2. Create a Virtual Environment
-
-Windows:
 
 ```bash
 python -m venv venv
@@ -834,9 +1203,13 @@ python -m pip install -r requirements.txt
 CREATE DATABASE "supportiq-ai";
 ```
 
-### 6. Create the Database Tables
+### 6. Create Database Tables
 
-Execute the SQL schema included in the repository.
+Execute:
+
+```text
+app/database/schema.sql
+```
 
 The schema creates:
 
@@ -862,7 +1235,7 @@ to:
 .env
 ```
 
-Then configure the required credentials and local database connection.
+Then configure the required credentials and database connection.
 
 ### 8. Configure Gmail Authentication
 
@@ -884,7 +1257,7 @@ Do not use the normal Google account password.
 
 ## Running the IMAP Integration Test
 
-Send one or more test support emails to the configured support inbox.
+Send test support emails to the configured support inbox.
 
 Recommended test cases:
 
@@ -898,40 +1271,47 @@ Run:
 python -m tests.manual_test_imap
 ```
 
-Example output:
+The integration test verifies:
+
+* Real IMAP SSL connectivity.
+* Gmail App Password authentication.
+* Mailbox selection.
+* Unread message detection.
+* Non-destructive retrieval.
+* MIME parsing.
+* HTML fallback.
+* Attachment processing.
+
+The manual test does not mark retrieved emails as read.
+
+---
+
+## Running the SMTP Integration Test
+
+Configure a valid recipient address in:
 
 ```text
-Connecting to support inbox...
-Connected successfully.
-
-Unread emails found: 3
-
-IMAP ID: b'1'
-Message-ID: <support-test@example.com>
-From: Test Customer
-Email: customer@example.com
-Subject: Unable to login
-Received: 2026-07-05 12:15:51+05:30
-
-Body:
-Hello Support,
-
-I cannot login after resetting my password.
-
-Attachments: 0
+tests/manual_test_smtp.py
 ```
 
-Attachment example:
+Run:
 
-```text
-Attachments: 1
-
-Error.png
-→
-uploads/attachments/<uuid>_Error.png
+```bash
+python -m tests.manual_test_smtp
 ```
 
-The manual integration test does not mark retrieved emails as read.
+The integration test verifies:
+
+* Real SMTP connectivity.
+* STARTTLS negotiation.
+* Gmail App Password authentication.
+* Message construction.
+* Plain-text content.
+* HTML alternative content.
+* Message-ID generation.
+* Real message delivery.
+
+A successful SMTP transaction alone does not prove final mailbox delivery. For manual verification, confirm that the message is received by the destination mailbox.
 
 ---
 
@@ -943,38 +1323,64 @@ Run all automated tests:
 python -m pytest -v
 ```
 
-Run only the attachment and email parser tests:
+Current result:
 
-```bash
-python -m pytest tests/test_attachment_service.py tests/test_email_parser.py -v
+```text
+36 passed
+1 warning
 ```
 
----
-
-## Test Coverage
-
-Generate terminal coverage output:
+Run Hour 3 infrastructure tests:
 
 ```bash
 python -m pytest \
-    --cov=app.services.attachment_service \
-    --cov=app.services.email_parser \
-    --cov-report=term-missing \
+    tests/test_retry.py \
+    tests/test_smtp_service.py \
+    tests/test_email_ingestion_service.py \
     -v
 ```
 
 Current result:
 
 ```text
-20 tests passed
-
-attachment_service.py    100%
-email_parser.py           83%
-
-TOTAL                     87%
+16 passed
 ```
 
-The current warning generated during the HTML parsing test originates from a third-party BeautifulSoup/lxml dependency and does not affect application functionality.
+---
+
+## Test Coverage
+
+Generate application-wide coverage:
+
+```bash
+python -m pytest --cov=app --cov-report=term-missing -v
+```
+
+Current result:
+
+```text
+Name                                      Stmts   Miss  Cover
+----------------------------------------------------------------
+app/config/settings.py                       32      0   100%
+app/core/constants.py                        36      0   100%
+app/core/exceptions.py                       41      0   100%
+app/core/logging.py                          49     28    43%
+app/core/retry.py                            54      5    91%
+app/schemas/email_schema.py                  16      0   100%
+app/schemas/ingestion_schema.py              29      3    90%
+app/schemas/smtp_schema.py                   12      0   100%
+app/services/attachment_service.py           25      0   100%
+app/services/email_ingestion_service.py      63     14    78%
+app/services/email_parser.py                 78     13    83%
+app/services/imap_service.py                 78     62    21%
+app/services/smtp_service.py                 58      4    93%
+----------------------------------------------------------------
+TOTAL                                       571    129    77%
+```
+
+The lower coverage of `imap_service.py` is expected at the current stage because real IMAP integration is manually verified while transport-level unit tests using mocked IMAP connections have not yet been implemented.
+
+Coverage improvement is scheduled during the dedicated testing and hardening phase.
 
 ---
 
@@ -983,32 +1389,32 @@ The current warning generated during the HTML parsing test originates from a thi
 At the current development stage:
 
 * Groq API integration is not implemented.
+* Provider-independent LLM abstraction is not implemented.
 * AI ticket analysis is not implemented.
+* Prompt templates are not implemented.
 * AI output validation is not implemented.
 * Category normalization is not implemented.
 * Deterministic priority assignment is not implemented.
 * Team routing is not implemented.
 * SQLAlchemy persistence is not implemented.
+* Repository layer is not implemented.
 * Ticket creation is not implemented.
-* SMTP acknowledgement sending is not implemented.
+* Automatic acknowledgement sending is not implemented.
 * Inbox polling scheduler is not implemented.
 * Duplicate email processing prevention is not implemented.
 * Emails are not yet marked as processed.
-* Structured application logging is not implemented.
-* Retry handling is not implemented.
+* Retry infrastructure is not yet integrated into transport services.
 * Ticket REST APIs are not implemented.
 * Manual agent review is not implemented.
 * Ticket lifecycle transitions are not implemented.
 * Audit-log persistence is not implemented.
 * Support dashboard is not implemented.
-
-These components are scheduled for subsequent development phases.
+* Automated IMAP transport unit tests are not yet implemented.
+* Sensitive-data redaction filters are not yet implemented.
 
 ---
 
 ## Security Considerations
-
-Security controls implemented or planned include:
 
 ### Implemented
 
@@ -1016,6 +1422,7 @@ Security controls implemented or planned include:
 * `.env` excluded from Git.
 * Google App Password authentication.
 * IMAP over SSL.
+* SMTP STARTTLS encryption.
 * Attachment extension allowlisting.
 * Maximum attachment size enforcement.
 * Filename sanitization.
@@ -1024,6 +1431,11 @@ Security controls implemented or planned include:
 * Pydantic data validation.
 * Runtime uploads excluded from Git.
 * Non-destructive email fetching.
+* Centralized application exception hierarchy.
+* Infrastructure exception translation.
+* Structured logging.
+* No intentional credential logging.
+* Per-message failure isolation.
 
 ### Planned
 
@@ -1034,19 +1446,32 @@ Security controls implemented or planned include:
 * Restricted ticket status transitions.
 * Idempotent email processing.
 * Duplicate ticket prevention.
-* Configurable retry policies.
-* Exponential backoff.
-* Structured logging.
-* Sensitive-data redaction from logs.
-* Centralized exception handling.
+* Retry integration at orchestration boundaries.
+* Sensitive-data redaction filters.
 * API input validation.
 * API error response sanitization.
-* Attachment MIME validation.
+* Attachment MIME signature validation.
 * Database connection pooling.
+* Prompt-injection mitigation.
+* LLM output trust boundaries.
 
 ---
 
 ## Design Decisions
+
+### Why a Modular Monolith?
+
+The project uses a modular monolith rather than premature microservices.
+
+This provides:
+
+* Clear service boundaries.
+* Lower deployment complexity.
+* Easier local development.
+* Straightforward debugging.
+* Strong transactional capabilities.
+* Independent testing of modules.
+* A future migration path toward distributed services if scale requires it.
 
 ### Why PostgreSQL?
 
@@ -1064,7 +1489,7 @@ PostgreSQL provides:
 
 Groq is planned as the LLM inference provider because it provides fast inference and supports instruction-tuned models suitable for classification, summarization, sentiment analysis, priority recommendation, and structured ticket extraction.
 
-The AI integration will be isolated behind an LLM service layer to reduce coupling between business logic and a specific provider.
+The AI integration will be isolated behind a service boundary to reduce provider coupling.
 
 ### Why IMAP and SMTP?
 
@@ -1072,15 +1497,39 @@ IMAP and SMTP provide direct code-driven email integration without requiring pai
 
 IMAP is used for receiving customer support requests.
 
-SMTP will be used for sending acknowledgement emails.
+SMTP provides the reusable outbound transport foundation for acknowledgement emails.
 
 ### Why `BODY.PEEK[]`?
 
 SupportIQ AI retrieves messages without automatically marking them as read.
 
-This prevents messages from being silently lost if processing fails after retrieval.
+This prevents messages from being silently lost if downstream processing fails.
 
-The final orchestration workflow will explicitly update the email processing state only after reaching a defined success boundary.
+The final workflow will update email state only after reaching the defined success boundary.
+
+### Why a Centralized Exception Hierarchy?
+
+A centralized exception hierarchy prevents transport-library exceptions from leaking throughout the application.
+
+This improves:
+
+* Maintainability.
+* Retry classification.
+* API error mapping.
+* Testing.
+* Observability.
+
+### Why Generic Retry Infrastructure?
+
+External dependencies such as email servers, LLM providers, and databases can fail transiently.
+
+A reusable retry executor prevents duplicated retry implementations and allows retry policy to remain consistent across infrastructure boundaries.
+
+### Why Structured JSON Logging?
+
+Machine-readable logs are easier to search, aggregate, analyze, and integrate with future observability platforms.
+
+Structured event fields also improve failure diagnosis during demonstrations and evaluation.
 
 ### Why Pydantic Schemas?
 
@@ -1101,40 +1550,60 @@ Attachment handling is isolated from IMAP transport and MIME parsing.
 
 This allows attachment validation and storage to be tested independently and replaced later with object storage if required.
 
+### Why Is SMTP Implemented Before Automatic Acknowledgements?
+
+SMTP is infrastructure.
+
+Automatic acknowledgements belong to the end-to-end ticket-processing workflow.
+
+Separating transport from business orchestration prevents outbound email delivery from becoming tightly coupled to ticket creation logic.
+
 ---
 
 ## Development Roadmap
 
 ### Hour 1 — Completed
 
-Project setup, architecture, PostgreSQL schema, configuration foundation.
+Project setup, architecture, PostgreSQL schema, and configuration foundation.
 
 ### Hour 2 — Completed
 
 Secure IMAP ingestion, MIME parsing, attachment processing, integration testing, automated unit tests, and coverage measurement.
 
-### Hour 3 — Next
+### Hour 3 — Completed
 
 * SMTP transport service.
-* Acknowledgement email foundation.
-* Custom application exception hierarchy.
-* Structured logging configuration.
-* Retry utility with exponential backoff.
+* Outbound email schemas.
+* Real SMTP integration verification.
+* Centralized application exception hierarchy.
+* IMAP exception refactoring.
+* Structured JSON logging infrastructure.
+* Generic retry utility.
+* Exponential backoff.
+* Jitter support.
+* Retry exhaustion handling.
 * Ingestion result schemas.
-* Duplicate-processing groundwork.
 * Email ingestion orchestration service.
+* Per-message failure isolation.
+* Batch processing metrics.
 * Unit tests.
+* Full regression testing.
+* Application-wide coverage measurement.
+* Real IMAP regression verification.
 
-### Hours 4–5
+### Hours 4–5 — Next
 
 * Groq API client.
-* Provider-independent LLM service.
+* Provider-independent LLM service boundary.
 * Prompt architecture.
+* Prompt versioning.
 * Structured ticket analysis.
 * JSON extraction.
 * AI response parsing.
-* Retry handling.
+* AI schema contracts.
+* Retry integration.
 * Timeout handling.
+* Rate-limit handling.
 * AI failure classification.
 * Unit tests.
 
@@ -1255,9 +1724,9 @@ The completed repository will contain:
 
 ## Assumptions
 
-* Gmail is used as the support inbox for the demonstration.
+* Gmail is used as the support inbox for demonstration purposes.
 * Gmail IMAP access is authenticated using a Google App Password.
-* SMTP will be used for acknowledgement emails.
+* Gmail SMTP is used for outbound email delivery.
 * PostgreSQL runs locally during development and demonstration.
 * Groq will be used as the LLM inference provider.
 * AI output will not be trusted directly and will pass through validation and normalization layers.
@@ -1266,8 +1735,10 @@ The completed repository will contain:
 * Support agents will remain able to review and override AI-generated classifications.
 * Incoming attachments are considered untrusted input.
 * Runtime customer data, attachments, credentials, and logs must not be committed to Git.
-* Email `Message-ID` values will be used as part of the idempotency strategy.
-* The final application will explicitly define the processing boundary at which successfully processed emails are marked as seen.
+* Email Message-ID values will form part of the idempotency strategy.
+* Successfully retrieved emails will not be marked as processed until the complete downstream processing boundary succeeds.
+* Retry behavior will be applied selectively to transient failures rather than indiscriminately retrying all exceptions.
+* The modular monolith architecture is intended to provide production-style separation of concerns without introducing unnecessary distributed-system complexity.
 
 ---
 

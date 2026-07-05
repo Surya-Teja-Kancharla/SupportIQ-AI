@@ -24,7 +24,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * Provider-independent AI capabilities
 * Deterministic normalization boundaries
 
-> **Current Development Status:** Hours 1–6 completed, plus Hour 6.5 bonus feature completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text normalization, Unicode normalization, canonical classification normalization, tag normalization and deduplication, confidence normalization, immutable normalized ticket-analysis contracts, normalization metadata, AI-generated support-agent reply suggestions, versioned reply-suggestion prompts, provider-independent reply-generation contracts, reply validation and normalization, maximum reply-length enforcement, real Groq reply-suggestion pipeline verification, and 137 passing automated tests.
+> **Current Development Status:** Hours 1–7 completed, including the Hour 6.5 optional bonus feature — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text and ticket-analysis normalization, immutable normalized ticket-analysis contracts, AI-generated support-agent reply suggestions, versioned reply-suggestion prompts, provider-independent reply-generation contracts, deterministic priority assignment, configurable business priority rules, AI recommendation and business-rule reconciliation, priority escalation without deterministic downgrading, priority-decision traceability, configurable category-to-team routing, routing-decision traceability, configuration validation, unknown-category rejection, immutable downstream decision processing, and 173 passing automated tests.
 
 ---
 
@@ -45,6 +45,8 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * [AI Evaluation Architecture](#ai-evaluation-architecture)
 * [Ticket Analysis Normalization Architecture](#ticket-analysis-normalization-architecture)
 * [AI Reply Suggestion Architecture](#ai-reply-suggestion-architecture)
+* [Priority Assignment Architecture](#priority-assignment-architecture)
+* [Routing Architecture](#routing-architecture)
 * [Prompt Engineering and Documentation](#prompt-engineering-and-documentation)
 * [SMTP Transport](#smtp-transport)
 * [Exception Architecture](#exception-architecture)
@@ -540,10 +542,60 @@ Completed:
 * Completed Hour 6.5 with zero automated test failures and zero regressions.
 * The optional real-provider AI evaluation rerun was interrupted during a provider/network read and is not considered part of the Hour 6.5 completion gate.
 
+### Hour 7 — Deterministic Priority Assignment and Configurable Ticket Routing
+
+Completed:
+
+* Added deterministic priority assignment after the ticket-analysis normalization boundary.
+* Added centralized priority-order configuration.
+* Added configurable business-rule phrase collections for Critical, High, Medium, and Low priorities.
+* Added deterministic matching of business rules against normalized ticket content.
+* Added priority-rule evaluation across issue summaries, detailed descriptions, categories, product or service context, and normalized tags.
+* Added case-insensitive business-rule matching.
+* Added highest-priority rule selection when multiple business rules match the same ticket.
+* Added reconciliation between AI-recommended priority and deterministic business rules.
+* Added escalation of AI-recommended priority when a higher-priority business rule matches.
+* Prevented lower-priority business rules from downgrading a higher AI-recommended priority.
+* Preserved the AI recommendation when no deterministic business rule matches.
+* Added explicit priority-decision output containing the AI-recommended priority, final priority, applied rule, and override status.
+* Added priority-decision traceability through human-readable applied-rule descriptions.
+* Added strict validation of the configured priority vocabulary.
+* Added rejection of missing or additional configured priority levels.
+* Added rejection of duplicate priority ranks.
+* Added rejection of empty business-rule collections.
+* Added rejection of empty business-rule phrases.
+* Added configurable category-to-team routing rules.
+* Added deterministic routing from normalized ticket categories to assigned support teams.
+* Added explicit routing-decision output containing category, assigned team, and applied routing rule.
+* Added dependency injection for routing configuration to improve testability and future configurability.
+* Added validation of empty routing configurations.
+* Added validation of empty routing categories.
+* Added validation of empty routing-team values.
+* Added explicit rejection of unsupported or unmapped ticket categories.
+* Preserved `NormalizedTicketAnalysis` immutability during priority assignment and routing.
+* Added dedicated application exceptions for priority-assignment failures, routing-configuration failures, and unmapped categories.
+* Added focused unit tests for deterministic priority assignment.
+* Added focused unit tests for configurable ticket routing.
+* Verified all supported category-to-team mappings.
+* Verified injected routing configuration behavior.
+* Verified business-rule escalation behavior.
+* Verified that lower-priority rules cannot downgrade higher AI recommendations.
+* Verified AI-priority preservation when no rule matches.
+* Verified highest-priority selection when multiple rules match.
+* Verified case-insensitive priority-rule matching.
+* Verified normalized-tag participation in priority assignment.
+* Verified priority and routing configuration validation.
+* Verified non-mutation of normalized ticket analyses.
+* Verified 36 focused Hour 7 tests.
+* Measured 97% focused coverage across the Hour 7 priority and routing services.
+* Achieved 96% coverage for `priority_service.py`.
+* Achieved 100% coverage for `routing_service.py`.
+* Verified the complete 173-test application regression suite.
+* Completed Hour 7 with zero automated test failures and zero regressions.
+
 ### Automated Testing Status
 
-```text
-137 tests passed
+173 tests passed
 1 third-party dependency deprecation warning
 0 test failures
 0 regressions
@@ -556,9 +608,19 @@ Focused Hour 6.5 reply-suggestion suite:
 
 43 tests passed
 
+Focused Hour 7 priority and routing suite:
+
+36 tests passed
+
+Focused Hour 7 coverage:
+
+97% total service coverage
+96% priority-service coverage
+100% routing-service coverage
+
 Full application regression suite:
 
-137 tests passed
+173 tests passed
 
 The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
 
@@ -1103,6 +1165,105 @@ This preserves human control over customer-facing communication.
 
 ---
 
+### Deterministic Priority Assignment
+
+SupportIQ AI includes a deterministic business-rule layer that converts normalized ticket analysis into an explicit final-priority decision.
+
+The priority pipeline operates as follows:
+
+```text
+NormalizedTicketAnalysis
+        │
+        ▼
+AI-Recommended Priority Validation
+        │
+        ▼
+Searchable Ticket Context Construction
+        │
+        ├── Issue Summary
+        ├── Detailed Description
+        ├── Category
+        ├── Product or Service
+        └── Normalized Tags
+        │
+        ▼
+Deterministic Business-Rule Matching
+        │
+        ├── Critical Rules
+        ├── High Rules
+        ├── Medium Rules
+        └── Low Rules
+        │
+        ▼
+Highest Matching Rule Selection
+        │
+        ▼
+AI Recommendation and Rule Reconciliation
+        │
+        ├── Higher Business Priority → Escalate
+        ├── Lower Business Priority → Preserve AI Recommendation
+        └── No Rule Match → Preserve AI Recommendation
+        │
+        ▼
+PriorityDecision
+```
+
+The priority service produces a new immutable decision object rather than mutating the normalized ticket analysis.
+
+Each priority decision records:
+
+* AI-recommended priority.
+* Final business priority.
+* Applied rule description.
+* Whether the AI recommendation was overridden.
+
+The deterministic rules are evaluated in descending priority order so the highest matching business rule is selected when multiple rules match.
+
+Business rules can escalate priority but cannot downgrade a higher AI-recommended priority.
+
+Priority configuration is validated during service initialization to reject incomplete priority vocabularies, duplicate ranks, empty rule collections, and empty rule phrases.
+
+### Configurable Ticket Routing
+
+SupportIQ AI includes a deterministic routing service that maps canonical normalized ticket categories to configured support teams.
+
+The routing pipeline operates as follows:
+
+```text
+NormalizedTicketAnalysis
+        │
+        ▼
+Canonical Category
+        │
+        ▼
+Configured Category-to-Team Mapping
+        │
+        ├── Technical Support
+        ├── Finance
+        ├── Sales
+        ├── Product Team
+        └── Customer Success
+        │
+        ▼
+RoutingDecision
+```
+
+Each routing decision records:
+
+* Canonical ticket category.
+* Assigned support team.
+* Applied routing-rule description.
+
+Routing configuration can be injected into the service, preserving testability and allowing future configuration sources to replace static application mappings.
+
+The routing service validates configuration during initialization and rejects empty routing configurations, empty category values, and empty team values.
+
+Unsupported normalized categories are rejected explicitly through `UnmappedCategoryError` rather than silently routed to a fallback team.
+
+The routing service does not mutate the normalized ticket analysis.
+
+---
+
 ## Technology Stack
 
 ### Backend
@@ -1148,6 +1309,12 @@ This preserves human control over customer-facing communication.
 * Normalization metadata
 * Suggested-reply normalization
 * Maximum reply-length enforcement
+* Deterministic priority business rules
+* Priority-order configuration
+* AI recommendation and business-rule reconciliation
+* Immutable priority-decision contracts
+* Configurable category-to-team routing
+* Immutable routing-decision contracts
 
 ### Database
 
@@ -1287,6 +1454,8 @@ SupportIQ-AI/
 │   │   └── __init__.py
 │   ├── config/
 │   │   ├── __init__.py
+│   │   ├── priority_rules.py
+│   │   ├── routing_rules.py
 │   │   └── settings.py
 │   ├── core/
 │   │   ├── __init__.py
@@ -1317,6 +1486,7 @@ SupportIQ-AI/
 │   │   ├── normalized_ticket_schema.py
 │   │   ├── smtp_schema.py
 │   │   ├── reply_suggestion_schema.py
+│   │   ├── ticket_decision_schema.py
 │   │   └── ticket_analysis_schema.py
 │   ├── services/
 │   │   ├── __init__.py
@@ -1328,6 +1498,8 @@ SupportIQ-AI/
 │   │   ├── llm_service.py
 │   │   ├── reply_suggestion_service.py
 │   │   ├── smtp_service.py
+│   │   ├── priority_service.py
+│   │   ├── routing_service.py
 │   │   └── ticket_analysis_normalizer.py
 │   └── utils/
 │       ├── __init__.py
@@ -1361,7 +1533,9 @@ SupportIQ-AI/
 │   ├── test_ticket_analysis_normalizer.py
 │   ├── manual_test_reply_suggestion.py
 │   ├── test_reply_suggestion_schema.py
+│   ├── test_priority_service.py
 │   ├── test_reply_suggestion_service.py
+│   ├── test_routing_service.py
 │   └── test_ticket_analysis_schema.py
 ├── uploads/
 │   ├── attachments/
@@ -2604,12 +2778,12 @@ python -m pytest -v
 Current result:
 
 ```text
-137 passed
+173 passed
 1 warning
 0 failures
 ```
 
-Run the Hour 6.5 normalization tests:
+Run the Hour 6 normalization tests:
 
 ```bash
 python -m pytest tests/test_text_normalizer.py tests/test_ticket_analysis_normalizer.py -v
@@ -2620,6 +2794,14 @@ Current result:
 ```text
 43 passed
 ```
+
+Run the focused Hour 6.5 reply-suggestion tests:
+
+python -m pytest tests/test_reply_suggestion_schema.py tests/test_reply_suggestion_service.py tests/test_groq_llm_service.py -v
+
+Run the focused Hour 7 priority and routing tests:
+
+python -m pytest tests/test_priority_service.py tests/test_routing_service.py -v
 
 The complete automated suite verifies:
 
@@ -2660,6 +2842,16 @@ The complete automated suite verifies:
 * Groq reply-generation behavior.
 * Reply-generation retry classification.
 * Plain-text response-format behavior.
+* Deterministic priority business-rule matching.
+* Highest-priority rule selection.
+* AI recommendation and business-rule reconciliation.
+* Prevention of priority downgrading.
+* Priority configuration validation.
+* Category-to-team routing.
+* Routing configuration injection.
+* Routing configuration validation.
+* Unsupported-category rejection.
+* Priority and routing input immutability.
 
 Automated tests do not consume Groq API quota.
 
@@ -2669,47 +2861,30 @@ Automated tests do not consume Groq API quota.
 
 Generate application-wide coverage:
 
-```bash
 python -m pytest --cov=app --cov-report=term-missing -v
-```
 
-Coverage as of the Hour 3 measurement (pending an updated Hour 4 run):
+Generate focused Hour 7 service coverage:
 
-```text
-Name                                      Stmts   Miss  Cover
+python -m pytest tests/test_priority_service.py tests/test_routing_service.py --cov=app.services.priority_service --cov=app.services.routing_service --cov-report=term-missing
+
+Focused Hour 7 coverage result:
+
+Name                               Stmts   Miss  Cover
 ----------------------------------------------------------------
-app/config/settings.py                       32      0   100%
-app/core/constants.py                        36      0   100%
-app/core/exceptions.py                       41      0   100%
-app/core/logging.py                          49     28    43%
-app/core/retry.py                            54      5    91%
-app/schemas/email_schema.py                  16      0   100%
-app/schemas/ingestion_schema.py              29      3    90%
-app/schemas/smtp_schema.py                   12      0   100%
-app/services/attachment_service.py           25      0   100%
-app/services/email_ingestion_service.py      63     14    78%
-app/services/email_parser.py                 78     13    83%
-app/services/imap_service.py                 78     62    21%
-app/services/smtp_service.py                 58      4    93%
+app/services/priority_service.py      53      2    96%
+app/services/routing_service.py       23      0   100%
 ----------------------------------------------------------------
-TOTAL                                       571    129    77%
-```
+TOTAL                                 76      2    97%
 
-The lower coverage of `imap_service.py` is expected at the current stage because real IMAP integration is manually verified while transport-level unit tests using mocked IMAP connections have not yet been implemented.
+Current regression status:
 
-A `--cov=app` run including the new Hour 4 modules (`llm_service.py`, `groq_llm_service.py`, `json_extractor.py`, `ticket_analysis_schema.py`, prompt registry and definitions) has not yet been captured in this document and should be regenerated before submission.
-
-Coverage improvement is scheduled during the dedicated testing and hardening phase.
-
-Current regression status is:
-
-```text
-105 passed
+173 passed
 1 warning
 0 failures
-```
 
 The warning originates from the BeautifulSoup/lxml dependency and does not affect application behavior.
+
+A fresh application-wide `--cov=app` report should be captured during the dedicated testing and hardening phase before final submission.
 
 ---
 
@@ -2792,12 +2967,14 @@ docs/ai_evaluation_report.json
 
 ## Current Limitations
 
-At the end of Hour 6.5:
+At the end of Hour 7:
 
-* Deterministic priority assignment is not implemented.
-* Priority justification is not implemented.
-* Team routing is not implemented.
-* Unknown normalized classifications are preserved but downstream rejection or fallback policy is not yet implemented.
+* Priority assignment currently uses configured phrase-based deterministic business rules and does not yet support database-managed or administrator-editable rules.
+* Priority-rule matching currently uses normalized substring matching rather than token-boundary, regex, or semantic rule evaluation.
+* Priority decisions are not yet persisted in PostgreSQL.
+* Routing currently uses static application configuration rather than database-managed or administrator-editable routing rules.
+* Unsupported normalized categories are explicitly rejected, but no quarantine, dead-letter, or manual-review workflow is implemented yet.
+* Priority and routing decisions are not yet integrated into the complete ticket-processing orchestration workflow.
 * AI confidence scores are not calibrated.
 * The baseline prompt produces high-confidence classification errors.
 * Standard, ambiguous, and adversarial cases require future prompt or business-rule improvements.
@@ -2868,6 +3045,12 @@ At the end of Hour 6.5:
 * Suggested replies remain subject to human review.
 * Customer email content and normalized ticket context are treated as untrusted prompt inputs.
 * Reply-suggestion prompts must preserve prompt-injection defenses and explicit data boundaries.
+* Deterministic priority escalation rules.
+* Prevention of lower-priority rule downgrades.
+* Explicit priority configuration validation.
+* Explicit routing configuration validation.
+* Explicit rejection of unsupported routing categories.
+* Immutable priority and routing decision processing.
 
 ### Planned
 
@@ -3328,6 +3511,64 @@ Send
 
 This preserves agent control and avoids coupling AI generation directly to external customer communication.
 
+### Why Use Deterministic Business Rules After AI Priority Recommendation?
+
+AI priority recommendations are useful but are not authoritative business decisions.
+
+The baseline AI evaluation demonstrated imperfect priority accuracy and high-confidence classification errors.
+
+SupportIQ AI therefore applies deterministic business rules after normalization.
+
+This produces:
+
+AI Recommendation
+        │
+        ▼
+Schema Validation
+        │
+        ▼
+Normalization
+        │
+        ▼
+Deterministic Priority Rules
+        │
+        ▼
+Final Priority Decision
+
+The deterministic layer can escalate priority when operationally important phrases are detected while preventing lower-priority rules from downgrading a higher AI recommendation.
+
+### Why Evaluate Priority Rules from Highest to Lowest?
+
+A ticket may match multiple business rules.
+
+Evaluating rules in descending priority order ensures the most operationally significant matching rule is selected deterministically.
+
+### Why Prevent Deterministic Rules from Downgrading AI Priority?
+
+The current business-rule layer is designed as a safety-oriented escalation mechanism.
+
+If the AI already recommends a higher priority than the matched deterministic rule, reducing that priority could suppress a potentially important support request.
+
+The service therefore selects the higher priority between the AI recommendation and the highest matched business rule.
+
+### Why Keep Routing Configuration Separate from Routing Logic?
+
+Category-to-team mappings are business configuration rather than routing-service implementation details.
+
+Separating the mappings allows:
+
+* Independent configuration testing.
+* Dependency injection.
+* Future database-backed routing rules.
+* Future administrator-managed routing configuration.
+* Cleaner routing-service responsibilities.
+
+### Why Reject Unsupported Categories Instead of Using a Default Team?
+
+Silently routing unsupported categories to a default team can hide prompt regressions, normalization errors, and configuration gaps.
+
+SupportIQ AI raises an explicit `UnmappedCategoryError` so unsupported classifications remain observable and can later enter a manual-review or failure-handling workflow.
+
 ---
 
 ## Development Roadmap
@@ -3483,18 +3724,29 @@ Secure IMAP ingestion, MIME parsing, attachment processing, integration testing,
 * 43 focused Hour 6.5 tests.
 * 137-test full regression verification.
 
-### Hour 7
+### Hour 7 — Completed
 
 * Deterministic priority assignment engine.
+* Centralized priority-rule configuration.
+* Critical, High, Medium, and Low business-rule collections.
 * Priority escalation rules.
 * AI recommendation and business-rule reconciliation.
-* Priority justification.
-* Configurable routing engine.
-* Category-to-team mappings.
-* Priority-aware routing.
-* Unknown-classification handling policy.
-* Unit tests.
-* Full regression verification.
+* Prevention of deterministic priority downgrading.
+* Highest-priority rule selection.
+* Priority-decision traceability.
+* Priority configuration validation.
+* Configurable category-to-team routing.
+* Routing-decision traceability.
+* Routing configuration injection.
+* Routing configuration validation.
+* Explicit unsupported-category rejection.
+* Immutable downstream decision processing.
+* Priority-service unit tests.
+* Routing-service unit tests.
+* 36 focused Hour 7 tests.
+* 97% focused Hour 7 service coverage.
+* 173-test full regression verification.
+* Zero automated test failures and zero regressions.
 
 ### Hours 8–9
 
@@ -3614,8 +3866,12 @@ The completed repository will contain:
 * Evaluated prompt versions are treated as immutable.
 * New prompt behavior should create a new prompt version and be evaluated against the labeled dataset.
 * AI confidence scores are advisory and are not authoritative business decisions.
-* Priority assignment will use a hybrid approach combining AI recommendations and deterministic business rules.
-* Team routing will be configurable.
+* Priority assignment uses a hybrid approach combining AI recommendations with deterministic business rules.
+* Deterministic business rules may escalate priority but do not downgrade higher AI-recommended priorities.
+* Priority rules are currently configured as application-level phrase collections.
+* Team routing uses configurable category-to-team mappings.
+* Unsupported routing categories are rejected explicitly rather than silently assigned to a fallback team.
+* Priority and routing decisions are not yet persisted until the database repository and transaction layers are implemented.
 * Support agents will remain able to review and override automated decisions.
 * Incoming attachments are untrusted input.
 * Runtime customer data, attachments, credentials, and logs must not be committed to Git.

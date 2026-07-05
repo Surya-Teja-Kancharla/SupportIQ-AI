@@ -1,9 +1,12 @@
-from app.schemas.ticket_analysis_schema import (
-    TicketAnalysisRequest,
-    TicketAnalysisResponse,
+from app.schemas.ticket_decision_schema import (
+    PriorityDecision,
+    RoutingDecision,
+    TicketDecisionResult,
 )
 
 __all__ = [
-    "TicketAnalysisRequest",
-    "TicketAnalysisResponse",
+    # existing exports...
+    "PriorityDecision",
+    "RoutingDecision",
+    "TicketDecisionResult",
 ]

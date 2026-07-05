@@ -208,3 +208,22 @@ class LLMRequestError(LLMError):
     """Raised when the provider rejects a non-retryable request."""
 
     default_message = "The LLM provider rejected the request."
+
+class BusinessRuleError(SupportIQError):
+    """Base exception for deterministic business-rule failures."""
+
+
+class PriorityAssignmentError(BusinessRuleError):
+    """Raised when final ticket priority cannot be assigned."""
+
+
+class RoutingError(BusinessRuleError):
+    """Base exception for routing failures."""
+
+
+class RoutingConfigurationError(RoutingError):
+    """Raised when routing configuration is invalid."""
+
+
+class UnmappedCategoryError(RoutingError):
+    """Raised when no routing rule exists for a ticket category."""

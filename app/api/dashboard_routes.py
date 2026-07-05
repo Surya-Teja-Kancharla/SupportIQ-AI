@@ -38,10 +38,10 @@ def ticket_list(
     ),
 ):
     filters = TicketFilters(
-        status=status,
-        priority=priority,
-        category=category,
-        assigned_team=assigned_team,
+        status=status or None,
+        priority=priority or None,
+        category=category or None,
+        assigned_team=assigned_team or None,
         limit=limit,
         offset=offset,
     )

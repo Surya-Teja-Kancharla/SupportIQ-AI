@@ -1,6 +1,6 @@
 # SupportIQ AI
 
-**SupportIQ AI** is an AI-powered customer support ticket automation system designed to ingest customer support emails, analyze unstructured support requests, classify issues, assign priorities, route tickets to appropriate teams, persist ticket data, send customer acknowledgements, and maintain a complete support ticket lifecycle.
+**SupportIQ AI** is an AI-powered customer support ticket automation system designed to ingest customer support emails, analyze unstructured support requests, classify issues, assign priorities, route tickets to appropriate teams, persist ticket data, generate AI-assisted reply suggestions for support agents, send customer acknowledgements, and maintain a complete support ticket lifecycle.
 
 The project is being developed as part of the **Anthrasync AI Engineer Hiring Process – Round 3 Technical Assignment (Task 4: AI Customer Support Ticket Automation)**.
 
@@ -21,8 +21,10 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * Scalability
 * Auditability
 * Security and data privacy
+* Provider-independent AI capabilities
+* Deterministic normalization boundaries
 
-> **Current Development Status:** Hours 1–6 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text normalization, Unicode normalization, canonical classification normalization, tag normalization and deduplication, confidence normalization, immutable normalized ticket-analysis contracts, normalization metadata, and 105 passing automated tests.
+> **Current Development Status:** Hours 1–6 completed, plus Hour 6.5 bonus feature completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation and storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective application-controlled LLM retries, real Groq integration verification, labeled AI evaluation dataset, evaluation metrics, confidence analysis, generated AI evaluation report, deterministic text normalization, Unicode normalization, canonical classification normalization, tag normalization and deduplication, confidence normalization, immutable normalized ticket-analysis contracts, normalization metadata, AI-generated support-agent reply suggestions, versioned reply-suggestion prompts, provider-independent reply-generation contracts, reply validation and normalization, maximum reply-length enforcement, real Groq reply-suggestion pipeline verification, and 137 passing automated tests.
 
 ---
 
@@ -42,6 +44,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * [AI Analysis Architecture](#ai-analysis-architecture)
 * [AI Evaluation Architecture](#ai-evaluation-architecture)
 * [Ticket Analysis Normalization Architecture](#ticket-analysis-normalization-architecture)
+* [AI Reply Suggestion Architecture](#ai-reply-suggestion-architecture)
 * [Prompt Engineering and Documentation](#prompt-engineering-and-documentation)
 * [SMTP Transport](#smtp-transport)
 * [Exception Architecture](#exception-architecture)
@@ -67,7 +70,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 
 ## Project Objective
 
-SupportIQ AI aims to automate the initial triage and management of customer support requests received through email.
+SupportIQ AI aims to automate the initial triage and management of customer support requests received through email while providing AI-assisted reply suggestions to support agents.
 
 The completed system will:
 
@@ -81,12 +84,14 @@ The completed system will:
 8. Determine ticket priority using AI recommendations and deterministic business rules.
 9. Route tickets to appropriate support teams.
 10. Persist tickets and related data in PostgreSQL.
-11. Automatically acknowledge customer requests through email.
-12. Allow support agents to review and modify AI-generated decisions.
-13. Maintain a complete ticket lifecycle.
-14. Record ticket changes in an audit trail.
-15. Handle failures, retries, malformed AI responses, duplicate processing, and workflow edge cases.
-16. Emit machine-readable operational logs for observability and debugging.
+11. Generate contextual AI-assisted reply suggestions for support agents.
+12. Allow support agents to review and modify suggested replies before customer delivery.
+13. Automatically acknowledge customer requests through email.
+14. Allow support agents to review and modify AI-generated decisions.
+15. Maintain a complete ticket lifecycle.
+16. Record ticket changes in an audit trail.
+17. Handle failures, retries, malformed AI responses, duplicate processing, and workflow edge cases.
+18. Emit machine-readable operational logs for observability and debugging.
 
 ---
 
@@ -106,8 +111,9 @@ Support agents traditionally perform several repetitive tasks manually:
 * Send an acknowledgement email.
 * Track ticket status changes.
 * Maintain historical records of ticket updates.
+* Draft an appropriate customer response.
 
-SupportIQ AI is intended to automate the initial support triage workflow while keeping human support agents in control of ticket review and resolution.
+SupportIQ AI is intended to automate the initial support triage workflow and provide contextual reply suggestions while keeping human support agents in control of ticket review, response approval, and resolution.
 
 ---
 
@@ -163,7 +169,14 @@ Ticket Analysis Normalization
       ├── Department Canonicalization
       ├── Tag Normalization and Deduplication
       ├── Confidence Precision Normalization
-      └── Normalization Metadata
+      ├── Normalization Metadata
+      ├── Original Customer Email Context
+      ├── Normalized Ticket Analysis
+      ├── Versioned Reply Prompt
+      ├── Provider-Independent LLM Request
+      ├── Reply Validation
+      ├── Whitespace Normalization
+      └── Maximum Reply-Length Enforcement
       │
       ▼
 Priority Assignment Engine
@@ -181,10 +194,13 @@ PostgreSQL Ticket Creation
       └── Internal Notes
       │
       ▼
-SMTP Customer Acknowledgement
+Agent Review
+      │
+      ├── Ticket Decision Review
+      └── Suggested Reply Review
       │
       ▼
-Manual Agent Review
+SMTP Customer Acknowledgement / Approved Response
       │
       ▼
 Ticket Lifecycle Management
@@ -372,6 +388,7 @@ Completed:
 Completed:
 
 * Corrected environment configuration used for real-provider execution.
+* Disabled Groq SDK automatic retries so retry ownership remains application-controlled.
 * Controlled real Groq API smoke testing.
 * Successful structured analysis of a real support-ticket example.
 * Verification of the complete provider path:
@@ -466,10 +483,67 @@ Completed:
 * Verified the complete 105-test application regression suite.
 * Completed Hour 6 with zero test failures and zero regressions.
 
+### Hour 6.5 — Bonus Feature: AI-Generated Reply Suggestions for Support Agents
+Completed:
+
+* Added AI-generated reply suggestions as an optional bonus feature.
+* Added a dedicated versioned reply-suggestion prompt.
+* Registered the reply-suggestion prompt through the central prompt registry.
+* Documented the reply-suggestion prompt in `docs/prompts.md`.
+* Extended the provider-independent `LLMService` boundary with reply-suggestion generation capability.
+* Added structured `ReplySuggestionRequest` contract.
+* Added structured `ReplySuggestionResponse` contract.
+* Added strict rejection of unexpected reply-suggestion fields.
+* Added required input-text validation.
+* Added empty suggested-reply rejection.
+* Added whitespace-only suggested-reply rejection.
+* Added immutable reply-suggestion response contracts.
+* Extended `GroqLLMService` to support reply-suggestion generation.
+* Reused the existing application-controlled selective retry infrastructure.
+* Preserved typed provider failures after retry exhaustion.
+* Reused timeout failure handling.
+* Reused rate-limit failure handling.
+* Reused connection failure handling.
+* Reused authentication failure handling.
+* Reused HTTP 4xx and HTTP 5xx failure classification.
+* Added explicit plain-text completion handling for reply generation.
+* Avoided JSON response-format enforcement for reply-suggestion requests.
+* Added `ReplySuggestionService` as an application-level AI capability boundary.
+* Constructed provider-independent reply requests from the original parsed email and normalized ticket analysis.
+* Added deterministic suggested-reply whitespace normalization.
+* Added configurable maximum reply-length policy enforcement.
+* Added validation for non-positive maximum reply lengths.
+* Preserved the original `ParsedEmail` without mutation.
+* Preserved the original `NormalizedTicketAnalysis` without mutation.
+* Returned a new validated reply response after normalization.
+* Propagated typed provider failures through the reply-suggestion service boundary.
+* Added reply-suggestion schema unit tests.
+* Added reply-suggestion service unit tests.
+* Added Groq reply-suggestion provider tests using mocked network boundaries.
+* Added retry and failure-classification tests for reply generation.
+* Added a test verifying that reply-suggestion requests do not use JSON response format.
+* Added a real-provider manual reply-suggestion verification script.
+* Verified the complete real-provider pipeline:
+  * Customer email construction.
+  * Real Groq ticket analysis.
+  * Ticket-analysis schema validation.
+  * Deterministic ticket-analysis normalization.
+  * Reply-suggestion service orchestration.
+  * Real Groq reply generation.
+  * Reply-suggestion schema validation.
+  * Suggested-reply normalization.
+  * Maximum reply-length policy enforcement.
+  * Validated suggested-reply output.
+* Re-ran the original real Groq ticket-analysis smoke test successfully.
+* Verified 43 focused Hour 6.5 tests.
+* Verified the complete 137-test application regression suite.
+* Completed Hour 6.5 with zero automated test failures and zero regressions.
+* The optional real-provider AI evaluation rerun was interrupted during a provider/network read and is not considered part of the Hour 6.5 completion gate.
+
 ### Automated Testing Status
 
 ```text
-105 tests passed
+137 tests passed
 1 third-party dependency deprecation warning
 0 test failures
 0 regressions
@@ -478,9 +552,13 @@ Focused Hour 6 normalization suite:
 
 37 tests passed
 
+Focused Hour 6.5 reply-suggestion suite:
+
+43 tests passed
+
 Full application regression suite:
 
-105 tests passed
+137 tests passed
 
 The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
 
@@ -590,7 +668,7 @@ Implemented capabilities include:
 
 The SMTP service is currently infrastructure only.
 
-Automatic ticket acknowledgement is intentionally deferred until ticket IDs, AI-generated summaries, database persistence, and workflow transaction boundaries are implemented.
+Automatic ticket acknowledgement and delivery of AI-generated reply suggestions are intentionally deferred until ticket IDs, database persistence, workflow transaction boundaries, and agent approval flows are implemented.
 
 ### Centralized Exception Handling
 
@@ -630,7 +708,7 @@ SupportIQError
 └── RetryExhaustedError
 ```
 
-The hierarchy prevents infrastructure-specific exceptions from leaking across application boundaries.
+The hierarchy prevents infrastructure-specific exceptions from leaking across application boundaries and supports typed failure handling for email infrastructure, retries, LLM providers, validation failures, and downstream orchestration.
 
 ### Retry Infrastructure
 
@@ -651,6 +729,13 @@ Implemented capabilities:
 * Deterministic unit testing.
 
 The retry executor is now selectively integrated into the Groq LLM provider adapter (see [AI Analysis Architecture](#ai-analysis-architecture)).
+
+The retry executor is selectively integrated into both Groq-backed AI capabilities:
+
+```text
+Ticket Analysis
+Reply Suggestion Generation
+```
 
 Transport-level retry integration for IMAP and SMTP has not yet been added.
 
@@ -685,7 +770,7 @@ Logging infrastructure includes:
 * Application log output.
 * Dedicated error log output.
 
-Logs must not contain credentials, API keys, database passwords, or Google App Passwords.
+Logs must not contain credentials, API keys, database passwords, Google App Passwords, or sensitive customer content beyond explicitly approved operational metadata.
 
 ### Structured Data Contracts
 
@@ -702,37 +787,47 @@ Pydantic schemas currently represent:
 * Ticket-analysis responses.
 * Normalized ticket analyses.
 * Normalization metadata.
+* Reply-suggestion requests.
+* Reply-suggestion responses.
 
 These models establish validated contracts between application layers.
 
 ### Provider-Independent LLM Service Boundary
 
-The application defines an abstract `LLMService` contract for support-ticket analysis.
+The application defines an abstract `LLMService` contract for multiple AI capabilities.
+
+Current capabilities:
+
+```text
+analyze_ticket(...)
+suggest_reply(...)
+```
 
 The concrete Groq integration is implemented by `GroqLLMService`.
 
-This design prevents the ticket-processing workflow from becoming directly coupled to the Groq SDK.
+This design prevents ticket-processing and agent-assistance workflows from becoming directly coupled to the Groq SDK.
 
 ### Versioned Prompt Architecture
 
 SupportIQ AI stores ticket-analysis prompts as versioned application artifacts.
 
-The current prompt:
+Current prompt capabilities include:
 
 ```text
 ticket-analysis-v1
+reply-suggestion-v1
 ```
 
-defines:
+Prompt versions are selected through a central registry.
 
-* Classification vocabularies.
-* Output schema requirements.
-* JSON-only response requirements.
-* Null semantics.
-* Confidence-score guidance.
-* Hallucination-reduction instructions.
-* Prompt-injection mitigation instructions.
-* Explicit untrusted-data boundaries.
+Prompt definitions provide:
+
+* Explicit prompt identifiers.
+* Versioned system instructions.
+* Capability-specific user prompt builders.
+* Runtime traceability.
+* Safer prompt evolution.
+* Reproducible evaluation and regression analysis.
 
 Prompt versions are selected through a central registry.
 
@@ -751,9 +846,21 @@ The processing pipeline performs:
 * Confidence-score range validation.
 * Translation into a typed `TicketAnalysisResponse`.
 
+Reply-suggestion responses are also validated before entering downstream workflow logic.
+
+The reply-suggestion pipeline performs:
+
+* Provider completion structure inspection.
+* Empty-content detection.
+* Whitespace-only content rejection.
+* Pydantic reply-response validation.
+* Deterministic whitespace normalization.
+* Maximum reply-length enforcement.
+* Construction of a new validated response object.
+
 ### Selective LLM Retry Integration
 
-The generic retry infrastructure is now integrated into the Groq provider adapter.
+The generic retry infrastructure is integrated into the Groq provider adapter for both ticket analysis and reply generation.
 
 Retryable failures include:
 
@@ -761,6 +868,9 @@ Retryable failures include:
 * Rate-limit failures.
 * Connection failures.
 * HTTP 5xx provider failures.
+* Invalid completion structures.
+* Empty suggested replies.
+* Whitespace-only suggested replies.
 
 Non-retryable failures include:
 
@@ -824,7 +934,7 @@ The evaluation framework separates:
 * Metric aggregation.
 * Report generation.
 
-This allows prompt versions and future model configurations to be evaluated reproducibly.
+This allows prompt versions and future model configurations to be evaluated reproducibly. The current evaluation framework does not yet score reply-suggestion quality.
 
 ### Ticket Analysis Normalization Layer
 
@@ -930,6 +1040,67 @@ Deterministic Normalization
 Business Priority Assignment
 ```
 
+### AI-Generated Reply Suggestions
+
+SupportIQ AI includes an optional bonus capability that generates contextual customer-response drafts for support agents.
+
+The capability consumes:
+
+```text
+ParsedEmail
+        +
+NormalizedTicketAnalysis
+```
+
+and produces:
+
+```text
+ReplySuggestionResponse
+```
+
+The service uses both the original customer message and the trusted normalized ticket-analysis representation.
+
+Generated replies are treated as untrusted AI output and must pass:
+
+```text
+Provider Completion Validation
+        │
+        ▼
+Non-Empty Content Validation
+        │
+        ▼
+ReplySuggestionResponse Validation
+        │
+        ▼
+Deterministic Whitespace Normalization
+        │
+        ▼
+Maximum Reply-Length Enforcement
+        │
+        ▼
+Validated Suggested Reply
+```
+
+The capability does not automatically send the generated reply.
+
+The intended workflow is:
+
+```text
+AI Suggested Reply
+        │
+        ▼
+Agent Review
+        │
+        ├── Approve
+        ├── Edit
+        └── Reject
+        │
+        ▼
+SMTP Delivery
+```
+
+This preserves human control over customer-facing communication.
+
 ---
 
 ## Technology Stack
@@ -949,7 +1120,9 @@ Business Priority Assignment
 * Llama 3.3 70B Versatile
 * Provider-independent `LLMService` 
 * Versioned prompt registry
-* Pydantic structured-response validation
+* Pydantic AI response contracts
+* Ticket-analysis generation
+* AI-assisted reply generation
 
 ### AI Evaluation
 
@@ -973,6 +1146,8 @@ Business Priority Assignment
 * Confidence precision normalization
 * Immutable normalized domain contracts
 * Normalization metadata
+* Suggested-reply normalization
+* Maximum reply-length enforcement
 
 ### Database
 
@@ -1007,6 +1182,7 @@ Business Priority Assignment
 * LLM timeout handling
 * LLM rate-limit handling
 * HTTP 4xx/5xx failure classification
+* Application-owned provider retry policy
 
 ### Scheduling
 
@@ -1031,6 +1207,7 @@ External Interfaces
         │
         ├── Gmail IMAP
         ├── Gmail SMTP
+        ├── Groq API
         ├── REST API
         └── Agent Dashboard
         │
@@ -1039,6 +1216,7 @@ Application / Orchestration Layer
         │
         ├── Email Ingestion Service
         ├── Ticket Processing Workflow
+        ├── Reply Suggestion Service
         └── Ticket Lifecycle Services
         │
         ▼
@@ -1051,6 +1229,7 @@ Domain Services
         ├── Ticket Analysis Normalization
         ├── Priority Assignment
         ├── Routing
+        ├── AI Reply Suggestion
         └── Acknowledgement Generation
         │
         ▼
@@ -1072,31 +1251,26 @@ Cross-cutting infrastructure:
 
 The architecture minimizes coupling between external infrastructure providers and business logic.
 
-For example:
-
 ```text
-Groq API
-    │
-    ▼
-GroqLLMService
-    │
-    ▼
-LLMService
-    │
-    ▼
-TicketAnalysisResponse
-    │
-    ▼
-TicketAnalysisNormalizer
-    │
-    ▼
-NormalizedTicketAnalysis
-    │
-    ▼
-Priority Assignment Engine
+                            LLMService
+                                │
+                    ┌───────────┴───────────┐
+                    ▼                       ▼
+            analyze_ticket()          suggest_reply()
+                    │                       │
+                    ▼                       ▼
+        TicketAnalysisResponse    ReplySuggestionResponse
+                    │                       │
+                    ▼                       ▼
+      TicketAnalysisNormalizer    ReplySuggestionService
+                    │                       │
+                    ▼                       ▼
+     NormalizedTicketAnalysis    Validated Suggested Reply
+                    │
+                    ▼
+       Priority Assignment Engine
 ```
-
-The application depends on an `LLMService` abstraction rather than coupling the complete workflow directly to Groq.
+---
 
 ---
 
@@ -1131,6 +1305,7 @@ SupportIQ-AI/
 │   ├── prompts/
 │   │   ├── __init__.py
 │   │   ├── registry.py
+│   │   ├── reply_suggestion_v1.py
 │   │   └── ticket_analysis_v1.py
 │   ├── scheduler/
 │   │   └── __init__.py
@@ -1141,6 +1316,7 @@ SupportIQ-AI/
 │   │   ├── ingestion_schema.py
 │   │   ├── normalized_ticket_schema.py
 │   │   ├── smtp_schema.py
+│   │   ├── reply_suggestion_schema.py
 │   │   └── ticket_analysis_schema.py
 │   ├── services/
 │   │   ├── __init__.py
@@ -1150,6 +1326,7 @@ SupportIQ-AI/
 │   │   ├── groq_llm_service.py
 │   │   ├── imap_service.py
 │   │   ├── llm_service.py
+│   │   ├── reply_suggestion_service.py
 │   │   ├── smtp_service.py
 │   │   └── ticket_analysis_normalizer.py
 │   └── utils/
@@ -1182,6 +1359,9 @@ SupportIQ-AI/
 │   ├── test_smtp_service.py
 │   ├── test_text_normalizer.py
 │   ├── test_ticket_analysis_normalizer.py
+│   ├── manual_test_reply_suggestion.py
+│   ├── test_reply_suggestion_schema.py
+│   ├── test_reply_suggestion_service.py
 │   └── test_ticket_analysis_schema.py
 ├── uploads/
 │   ├── attachments/
@@ -1488,12 +1668,13 @@ The validated AI response will later pass through deterministic category normali
 
 ### Prompt Versioning
 
-Ticket-analysis prompts are explicitly versioned.
+AI prompts are explicitly versioned by capability.
 
 Current version:
 
 ```text
 ticket-analysis-v1
+reply-suggestion-v1
 ```
 
 Prompt definitions contain:
@@ -1809,6 +1990,144 @@ Business Priority Assignment
         ▼
 Final Ticket Priority
 ```
+
+---
+
+## AI Reply Suggestion Architecture
+
+Hour 6.5 introduced the optional AI-generated reply-suggestion capability.
+
+```text
+ParsedEmail
+      │
+      │
+      ├────────────────────────────┐
+      │                            │
+      ▼                            ▼
+Ticket Analysis          Original Customer Context
+      │                            │
+      ▼                            │
+Schema Validation                 │
+      │                            │
+      ▼                            │
+Ticket Analysis Normalization     │
+      │                            │
+      ▼                            │
+NormalizedTicketAnalysis          │
+      │                            │
+      └──────────────┬─────────────┘
+                     ▼
+          ReplySuggestionService
+                     │
+                     ▼
+          ReplySuggestionRequest
+                     │
+                     ▼
+              LLMService
+                     │
+                     ▼
+             GroqLLMService
+                     │
+                     ▼
+         Versioned Reply Prompt
+                     │
+                     ▼
+         Raw Plain-Text Completion
+                     │
+                     ▼
+         ReplySuggestionResponse
+                     │
+                     ▼
+       Deterministic Reply Normalization
+                     │
+                     ▼
+        Maximum Reply-Length Policy
+                     │
+                     ▼
+         Validated Suggested Reply
+                     │
+                     ▼
+              Future Agent Review
+```
+
+### Reply Suggestion Input Boundary
+
+The reply-suggestion service consumes:
+
+```text
+ParsedEmail
+NormalizedTicketAnalysis
+```
+
+This provides the model with:
+
+* Original sender context.
+* Original email subject.
+* Original customer message.
+* Normalized issue summary.
+* Normalized detailed description.
+* Canonical category.
+* AI-recommended priority.
+* Canonical sentiment.
+* Product or service context.
+* Suggested department.
+* Normalized tags.
+* Confidence metadata when included by the prompt contract.
+
+### Provider-Independent Reply Generation
+
+Reply generation is exposed through:
+
+```text
+LLMService.suggest_reply(...)
+```
+
+The Groq-specific implementation remains isolated inside:
+
+```text
+GroqLLMService
+```
+
+This prevents `ReplySuggestionService` from depending directly on the Groq SDK.
+
+### Reply Response Validation
+
+Suggested replies are treated as untrusted provider output.
+
+The provider adapter rejects:
+
+* Invalid completion structures.
+* Empty completion content.
+* Whitespace-only completion content.
+
+The reply-suggestion service then performs:
+
+* Typed response handling.
+* Deterministic whitespace normalization.
+* Maximum reply-length enforcement.
+* New validated response construction.
+
+### Human-in-the-Loop Boundary
+
+The reply-suggestion capability does not send email automatically.
+
+The intended boundary is:
+
+```text
+AI Draft
+   │
+   ▼
+Agent Review
+   │
+   ├── Approve
+   ├── Edit
+   └── Reject
+   │
+   ▼
+SMTP Delivery
+```
+
+This preserves support-agent control over customer-facing communication.
 
 ---
 
@@ -2285,12 +2604,12 @@ python -m pytest -v
 Current result:
 
 ```text
-105 passed
+137 passed
 1 warning
 0 failures
 ```
 
-Run the Hour 6 normalization tests:
+Run the Hour 6.5 normalization tests:
 
 ```bash
 python -m pytest tests/test_text_normalizer.py tests/test_ticket_analysis_normalizer.py -v
@@ -2299,7 +2618,7 @@ python -m pytest tests/test_text_normalizer.py tests/test_ticket_analysis_normal
 Current result:
 
 ```text
-37 passed
+43 passed
 ```
 
 The complete automated suite verifies:
@@ -2334,6 +2653,13 @@ The complete automated suite verifies:
 * Original AI response immutability.
 * Normalized contract immutability.
 * Strict normalized schema validation.
+* Reply-suggestion schema validation.
+* Reply-suggestion service orchestration.
+* Reply normalization.
+* Maximum reply-length enforcement.
+* Groq reply-generation behavior.
+* Reply-generation retry classification.
+* Plain-text response-format behavior.
 
 Automated tests do not consume Groq API quota.
 
@@ -2466,7 +2792,7 @@ docs/ai_evaluation_report.json
 
 ## Current Limitations
 
-At the end of Hour 6:
+At the end of Hour 6.5:
 
 * Deterministic priority assignment is not implemented.
 * Priority justification is not implemented.
@@ -2492,6 +2818,10 @@ At the end of Hour 6:
 * Support dashboard is not implemented.
 * Automated IMAP transport unit tests are not yet implemented.
 * Sensitive-data redaction filters are not yet implemented.
+* Reply suggestions require agent review and are not automatically sent.
+* Reply-suggestion quality does not yet have a dedicated evaluation framework.
+* Suggested replies are not yet persisted in PostgreSQL.
+* No agent approval/edit/reject workflow is implemented yet.
 
 ---
 
@@ -2534,6 +2864,10 @@ At the end of Hour 6:
 * Immutable normalized ticket-analysis contracts.
 * Preservation of original AI classifications in normalization metadata.
 * Separation of AI-recommended priority from final business priority.
+* Customer-facing AI-generated replies are not automatically sent.
+* Suggested replies remain subject to human review.
+* Customer email content and normalized ticket context are treated as untrusted prompt inputs.
+* Reply-suggestion prompts must preserve prompt-injection defenses and explicit data boundaries.
 
 ### Planned
 
@@ -2848,6 +3182,152 @@ The final ticket priority will be produced by deterministic business rules.
 
 This prevents the LLM recommendation from becoming an authoritative business decision.
 
+### Why Add AI-Generated Reply Suggestions as a Bonus Feature?
+
+The technical assignment explicitly identifies AI-generated support-agent reply suggestions as an optional bonus capability.
+
+The feature extends the existing AI architecture without disrupting the core ticket-processing roadmap.
+
+It demonstrates that the provider-independent LLM boundary can support multiple AI capabilities rather than only ticket analysis.
+
+### Why Extend `LLMService` Instead of Calling Groq Directly?
+
+Reply generation is an application AI capability, while Groq is infrastructure.
+
+The dependency direction remains:
+
+```text
+ReplySuggestionService
+        │
+        ▼
+LLMService
+        │
+        ▼
+GroqLLMService
+        │
+        ▼
+Groq API
+```
+
+This preserves provider independence and keeps the application workflow testable without network access.
+
+### Why Use a Separate Versioned Reply-Suggestion Prompt?
+
+Ticket analysis and reply generation solve different tasks.
+
+Ticket analysis requires:
+
+```text
+Structured JSON Output
+Classification Vocabularies
+Confidence Scores
+Strict Schema Validation
+```
+
+Reply generation requires:
+
+```text
+Natural-Language Output
+Customer Context
+Normalized Ticket Context
+Tone Constraints
+Groundedness Constraints
+Concise Actionable Communication
+```
+
+Separating the prompts avoids mixing unrelated responsibilities and allows each capability to evolve independently.
+
+### Why Does Reply Generation Use Plain Text Instead of JSON Response Format?
+
+The output contract contains one customer-facing text value.
+
+Forcing the provider to generate JSON adds unnecessary formatting complexity and creates additional failure modes.
+
+The provider therefore generates plain text, which is wrapped in and validated through `ReplySuggestionResponse`.
+
+### Why Use Normalized Ticket Analysis as Reply Context?
+
+Raw model classifications may contain inconsistent formatting, aliases, duplicate tags, or unstable representations.
+
+The reply-suggestion service consumes:
+
+```text
+NormalizedTicketAnalysis
+```
+
+so the second AI capability receives deterministic application context.
+
+This preserves the processing boundary:
+
+```text
+Untrusted Ticket-Analysis Output
+        │
+        ▼
+Schema Validation
+        │
+        ▼
+Deterministic Normalization
+        │
+        ▼
+Trusted Application Context
+        │
+        ▼
+Reply Suggestion Generation
+```
+
+### Why Preserve the Original Customer Email?
+
+Normalization summarizes and canonicalizes ticket-analysis output but does not replace the original customer message.
+
+The reply-generation model receives the original email context to avoid losing customer-specific details that may not appear in the normalized analysis.
+
+### Why Normalize Suggested Replies?
+
+Provider output may contain inconsistent leading, trailing, or repeated whitespace.
+
+Deterministic normalization provides stable output for:
+
+* Testing.
+* Future persistence.
+* API responses.
+* Dashboard rendering.
+* Agent review.
+
+### Why Enforce a Maximum Reply Length?
+
+LLMs can generate unnecessarily long customer responses.
+
+A maximum reply-length policy:
+
+* Prevents unexpectedly large outputs.
+* Keeps agent review manageable.
+* Establishes a deterministic application boundary.
+* Prevents provider behavior from controlling downstream storage or UI constraints.
+
+### Why Not Automatically Send AI-Generated Replies?
+
+AI-generated customer communication should remain subject to human review.
+
+The current capability generates a suggestion only.
+
+Future workflow:
+
+```text
+Generate
+   │
+   ▼
+Review
+   │
+   ├── Approve
+   ├── Edit
+   └── Reject
+   │
+   ▼
+Send
+```
+
+This preserves agent control and avoids coupling AI generation directly to external customer communication.
+
 ---
 
 ## Development Roadmap
@@ -2970,6 +3450,38 @@ Secure IMAP ingestion, MIME parsing, attachment processing, integration testing,
 * AI-recommended priority separation.
 * 37 focused normalization tests.
 * 105-test full regression verification.
+
+### Hour 6.5 — Bonus Feature Completed
+
+* AI-generated support-agent reply suggestions.
+* Versioned `reply-suggestion-v1` prompt.
+* Central prompt-registry integration.
+* Prompt documentation.
+* Provider-independent reply-generation contract.
+* `LLMService.suggest_reply(...)` capability.
+* Groq reply-generation implementation.
+* Structured reply-suggestion request schema.
+* Structured reply-suggestion response schema.
+* Strict reply contract validation.
+* Plain-text provider completion handling.
+* Reply-suggestion service boundary.
+* Original email and normalized-analysis context composition.
+* Suggested-reply whitespace normalization.
+* Maximum reply-length policy.
+* Input immutability verification.
+* Provider failure propagation.
+* Selective retry integration for reply generation.
+* Timeout and rate-limit handling.
+* Connection failure handling.
+* Authentication failure handling.
+* HTTP 4xx/5xx differentiation.
+* Mocked provider tests.
+* Reply schema tests.
+* Reply service tests.
+* Real Groq reply-suggestion pipeline verification.
+* Original Groq ticket-analysis regression verification.
+* 43 focused Hour 6.5 tests.
+* 137-test full regression verification.
 
 ### Hour 7
 
@@ -3111,6 +3623,11 @@ The completed repository will contain:
 * Retrieved emails will not be marked as processed until the complete downstream success boundary is reached.
 * Retry behavior is applied selectively to transient failures.
 * The modular monolith architecture provides production-style separation of concerns without unnecessary distributed-system complexity.
+* AI-generated reply suggestions are drafts for support-agent review.
+* Generated replies are not sent automatically.
+* `ParsedEmail` and `NormalizedTicketAnalysis` are not mutated during reply generation.
+* The application owns provider retry behavior; Groq SDK automatic retries are disabled.
+* Reply-suggestion generation uses plain-text completion semantics rather than JSON response formatting.
 
 ---
 

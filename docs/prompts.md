@@ -2,9 +2,12 @@
 
 ## Purpose
 
-This document records the AI prompts used by SupportIQ AI for customer support ticket analysis and classification.
+This document records the versioned AI prompts used by SupportIQ AI.
 
-The technical assignment requires submission of the AI prompts used for ticket analysis and classification.
+SupportIQ AI currently uses separate prompt families for:
+
+* Structured customer-support ticket analysis and classification.
+* AI-generated customer-support reply suggestions for human review.
 
 Executable prompt definitions are stored under:
 
@@ -12,43 +15,50 @@ Executable prompt definitions are stored under:
 app/prompts/
 ```
 
-The current evaluated production prompt is:
+Current prompt versions:
 
 ```text
 ticket-analysis-v1
+reply-suggestion-v1
 ```
 
-The prompt is selected at runtime through:
+Prompts are selected at runtime through:
 
 ```text
 app/prompts/registry.py
 ```
 
-The prompt is executed through:
+Provider execution is performed through:
 
 ```text
 app/services/groq_llm_service.py
 ```
 
-The provider-independent service contract is defined in:
+The provider-independent LLM contract is defined in:
 
 ```text
 app/services/llm_service.py
 ```
 
-AI responses are validated against:
+Ticket-analysis responses are validated against:
 
 ```text
 app/schemas/ticket_analysis_schema.py
 ```
 
-Prompt quality is evaluated using:
+Reply-suggestion requests and responses are validated against:
+
+```text
+app/schemas/reply_suggestion_schema.py
+```
+
+Ticket-analysis prompt quality is evaluated using:
 
 ```text
 sample_data/ai_evaluation_dataset.json
 ```
 
-The generated evaluation evidence is stored in:
+The generated ticket-analysis evaluation evidence is stored in:
 
 ```text
 docs/ai_evaluation_report.json
@@ -58,9 +68,10 @@ docs/ai_evaluation_report.json
 
 # Prompt Inventory
 
-| Prompt ID | Version | Purpose | Executable Definition | Runtime Consumer | Evaluation Status |
-|---|---|---|---|---|---|
-| `ticket-analysis-v1` | `v1` | Analyze and classify customer support tickets into a strict structured response | `app/prompts/ticket_analysis_v1.py` | `app/services/groq_llm_service.py` | Evaluated against dataset version `1.0.0` |
+| Prompt ID | Version | Purpose | Input Contract | Output Contract | Executable Definition | Intended Runtime Consumer | Evaluation Status |
+|---|---|---|---|---|---|---|---|
+| `ticket-analysis-v1` | `v1` | Extract, summarize, classify, and recommend handling metadata for customer-support tickets | `TicketAnalysisRequest` | `TicketAnalysisResponse` | `app/prompts/ticket_analysis_v1.py` | `GroqLLMService.analyze_ticket()` | Evaluated against dataset version `1.0.0` |
+| `reply-suggestion-v1` | `v1` | Generate a concise customer-support reply draft for human review | `ReplySuggestionRequest` | `ReplySuggestionResponse` | `app/prompts/reply_suggestion_v1.py` | `GroqLLMService.generate_reply_suggestion()` | Not yet formally evaluated |
 
 ---
 
@@ -72,15 +83,13 @@ docs/ai_evaluation_report.json
 Prompt ID: ticket-analysis-v1
 Prompt Version: v1
 Purpose: Support-ticket extraction, summarization, classification, priority recommendation, sentiment analysis, department recommendation, tag generation, and confidence estimation.
-Provider: Groq
+Provider Used During Baseline Evaluation: Groq
 Model Used During Baseline Evaluation: llama-3.3-70b-versatile
 Temperature: 0.1
 Maximum Output Tokens: 1200
 Evaluation Dataset Version: 1.0.0
 Evaluation Cases: 24
 ```
-
----
 
 ## Runtime Location
 
@@ -120,11 +129,10 @@ Schema implementation:
 app/schemas/ticket_analysis_schema.py
 ```
 
----
-
 ## Prompt Inputs
 
-The prompt receives structured support-ticket information from a `TicketAnalysisRequest`.
+The prompt receives structured support-ticket information from a
+`TicketAnalysisRequest`.
 
 Current input fields:
 
@@ -136,9 +144,11 @@ body
 attachment_filenames
 ```
 
-The email subject, body, sender information, and attachment filenames are treated as untrusted customer-controlled data.
+The email subject, body, sender information, and attachment filenames are
+treated as untrusted customer-controlled data.
 
-The prompt must not follow instructions embedded inside customer content that attempt to:
+The prompt must not follow instructions embedded inside customer content that
+attempt to:
 
 * Change the AI role.
 * Override classification rules.
@@ -148,71 +158,7 @@ The prompt must not follow instructions embedded inside customer content that at
 * Ignore previous instructions.
 * Execute unrelated tasks.
 
----
-
-## System Prompt
-
-The authoritative executable system prompt is defined in:
-
-```text
-app/prompts/ticket_analysis_v1.py
-```
-
-Copy the exact value of the `SYSTEM_PROMPT` constant from that file below this line.
-
-```text
-PASTE THE EXACT SYSTEM_PROMPT CONSTANT FROM
-app/prompts/ticket_analysis_v1.py HERE WITHOUT MODIFICATION.
-```
-
-The system prompt is responsible for defining:
-
-* The model's support-ticket analysis role.
-* The required output fields.
-* The allowed category vocabulary.
-* The allowed priority vocabulary.
-* The allowed sentiment vocabulary.
-* The allowed department vocabulary.
-* JSON-only response behavior.
-* Null semantics.
-* Evidence-based extraction requirements.
-* Hallucination-reduction constraints.
-* Confidence-score semantics.
-* Prompt-injection resistance.
-* Treatment of customer-controlled content as untrusted data.
-
----
-
-## User Prompt Template
-
-The authoritative executable user prompt builder is defined in:
-
-```text
-app/prompts/ticket_analysis_v1.py
-```
-
-Copy the exact user prompt template generated by `build_user_prompt()` below this line.
-
-Replace runtime values only with descriptive placeholders.
-
-```text
-PASTE THE EXACT USER PROMPT TEMPLATE FROM
-build_user_prompt() HERE.
-
-USE PLACEHOLDERS SUCH AS:
-
-{sender_name}
-{sender_email}
-{subject}
-{body}
-{attachment_filenames}
-```
-
-The user prompt template is responsible for supplying the customer support request to the model while preserving the instruction hierarchy established by the system prompt.
-
----
-
-## Required Output Contract
+## Output Contract
 
 The model must return one JSON object containing:
 
@@ -240,23 +186,13 @@ The authoritative runtime output contract is implemented by:
 TicketAnalysisResponse
 ```
 
-in:
-
-```text
-app/schemas/ticket_analysis_schema.py
-```
-
 Unexpected response fields are rejected.
 
 Confidence scores outside the inclusive range `0.0` to `1.0` are rejected.
 
----
-
 ## Classification Vocabulary
 
-The exact allowed category vocabulary is defined in the executable prompt and response schema.
-
-Current categories include:
+Allowed categories:
 
 ```text
 Technical Support
@@ -269,9 +205,8 @@ Refund Request
 General Inquiry
 ```
 
-The model must select the single category that best represents the primary customer issue.
-
----
+The model must select the single category that best represents the primary
+customer issue.
 
 ## Priority Vocabulary
 
@@ -284,13 +219,13 @@ Medium
 Low
 ```
 
-The prompt requests an AI priority recommendation.
+The prompt produces an AI priority recommendation.
 
-The AI recommendation is not intended to remain the sole authoritative priority decision.
+The AI recommendation is not the final authoritative business priority.
 
-The downstream workflow will introduce deterministic priority business rules during Hours 6–7.
-
----
+After schema validation, the analysis passes through deterministic
+normalization. The final priority will be assigned by the downstream
+deterministic priority engine.
 
 ## Sentiment Vocabulary
 
@@ -302,15 +237,12 @@ Neutral
 Negative
 ```
 
-Sentiment should represent the customer's expressed tone rather than the technical severity of the issue.
-
----
+Sentiment represents the customer's expressed tone rather than technical
+severity.
 
 ## Department Vocabulary
 
-The exact allowed department vocabulary is defined in the executable prompt and response schema.
-
-Current department recommendations correspond to support teams such as:
+Allowed department recommendations:
 
 ```text
 Technical Support
@@ -322,17 +254,15 @@ Product Team
 
 The AI-generated department is a recommendation.
 
-Final ticket routing will be performed through configurable deterministic routing logic during Hours 6–7.
-
----
+Final routing will be performed through configurable deterministic routing
+logic.
 
 ## Null Semantics
 
-The prompt instructs the model not to invent unavailable customer information.
+Nullable fields use JSON `null` when information is not supported by customer
+content.
 
-Nullable fields should use JSON `null` when information is not supported by the ticket content.
-
-Examples include:
+Examples:
 
 ```text
 customer_name
@@ -340,7 +270,7 @@ company
 product_service
 ```
 
-The model must not use fabricated placeholder values such as:
+The model must not fabricate placeholder values such as:
 
 ```text
 Unknown Company
@@ -349,8 +279,6 @@ N/A
 ```
 
 when the output contract permits `null`.
-
----
 
 ## Hallucination Reduction
 
@@ -365,13 +293,12 @@ The prompt instructs the model to:
 * Use `null` for unavailable nullable information.
 * Produce concise summaries grounded in the customer request.
 
----
-
 ## Prompt-Injection Resistance
 
 Customer email content and attachment filenames are treated as untrusted data.
 
-The prompt instructs the model to ignore customer-controlled instructions that attempt to:
+The prompt instructs the model to ignore customer-controlled instructions that
+attempt to:
 
 * Override system instructions.
 * Change classification rules.
@@ -380,15 +307,10 @@ The prompt instructs the model to ignore customer-controlled instructions that a
 * Produce output outside the required JSON object.
 * Redirect the model toward unrelated tasks.
 
-Adversarial and prompt-injection-oriented examples are included in the evaluation dataset.
-
----
+Adversarial and prompt-injection-oriented examples are included in the
+evaluation dataset.
 
 ## Structured Output Handling
-
-The model is instructed to return JSON only.
-
-Provider output is not trusted directly.
 
 Runtime response processing performs:
 
@@ -411,7 +333,10 @@ Object-Type Validation
 TicketAnalysisResponse Validation
         │
         ▼
-Validated Structured Analysis
+TicketAnalysisNormalizer
+        │
+        ▼
+NormalizedTicketAnalysis
 ```
 
 The JSON extractor supports:
@@ -427,29 +352,56 @@ The extractor rejects:
 * JSON arrays.
 * Responses without a valid JSON object.
 
----
+## Normalization Boundary
+
+Validated `TicketAnalysisResponse` objects pass through:
+
+```text
+app/services/ticket_analysis_normalizer.py
+```
+
+The normalization layer provides:
+
+* Unicode NFKC normalization.
+* Whitespace normalization.
+* Optional-text normalization.
+* Category canonicalization.
+* AI-recommended-priority canonicalization.
+* Sentiment canonicalization.
+* Department canonicalization.
+* Tag normalization.
+* Empty-tag removal.
+* Duplicate-tag removal.
+* Stable first-seen tag ordering.
+* Confidence precision normalization.
+* Normalization metadata.
+* Immutable normalized contracts.
+
+The normalized output contract is:
+
+```text
+NormalizedTicketAnalysis
+```
+
+The AI-generated priority is stored as:
+
+```text
+ai_recommended_priority
+```
+
+and remains separate from the future final business priority.
 
 ## Confidence Score Semantics
 
-The prompt requests a confidence score between:
-
-```text
-0.0
-```
-
-and:
-
-```text
-1.0
-```
-
-Confidence represents the model's estimated certainty that the structured classification is supported by the supplied ticket content.
+Confidence represents the model's estimated certainty that the structured
+classification is supported by supplied ticket content.
 
 Confidence is advisory metadata.
 
-It is not treated as authoritative business logic.
+It is not authoritative business logic.
 
-The Hour 5 baseline evaluation demonstrated that confidence is not yet calibrated reliably.
+The Hour 5 baseline evaluation demonstrated that confidence is not calibrated
+reliably.
 
 ---
 
@@ -457,7 +409,7 @@ The Hour 5 baseline evaluation demonstrated that confidence is not yet calibrate
 
 ## Evaluation Dataset
 
-Prompt quality is evaluated using:
+Dataset:
 
 ```text
 sample_data/ai_evaluation_dataset.json
@@ -480,7 +432,7 @@ ambiguous
 adversarial
 ```
 
-The dataset contains expected values for:
+Expected labels:
 
 ```text
 category
@@ -488,8 +440,6 @@ priority
 sentiment
 suggested_department
 ```
-
----
 
 ## Baseline Evaluation Results
 
@@ -531,79 +481,37 @@ Average Confidence Incorrect:     0.8273
 High-Confidence Errors:          10
 ```
 
-The complete machine-readable evaluation report is stored in:
+The complete machine-readable report is stored in:
 
 ```text
 docs/ai_evaluation_report.json
 ```
 
----
-
 ## Evaluation Findings
 
-### Structured Output Reliability
-
-The prompt produced schema-valid structured output for every evaluation case.
-
-Result:
+The baseline produced:
 
 ```text
 100.00% structured-output validity
-```
-
-This indicates that the prompt constraints, JSON extraction pipeline, and Pydantic validation contract provide a reliable structured-output boundary for the current evaluation dataset.
-
-### Classification Accuracy
-
-Category accuracy:
-
-```text
-75.00%
-```
-
-The baseline prompt provides useful classification behavior but leaves measurable room for improvement.
-
-### Priority Accuracy
-
-Priority accuracy:
-
-```text
-66.67%
-```
-
-AI priority recommendations are not sufficiently reliable to act as the sole authoritative business decision.
-
-The downstream workflow will combine AI recommendations with deterministic priority rules.
-
-### Edge-Case Behavior
-
-Priority-sensitive cases achieved:
-
-```text
-100.00% all-label accuracy
-```
-
-Standard, ambiguous, and adversarial cases showed lower all-label accuracy.
-
-These results identify concrete areas for future prompt refinement and deterministic post-processing.
-
-### Confidence Calibration
-
-Average confidence for incorrect predictions was slightly higher than average confidence for correct predictions.
-
-The evaluation also identified:
-
-```text
+75.00% category accuracy
+66.67% priority accuracy
+79.17% sentiment accuracy
+79.17% department accuracy
 10 high-confidence errors
 ```
 
-Therefore, confidence scores must remain advisory and must not independently authorize automated ticket decisions.
+The results support the following architecture decisions:
 
----
+* Keep confidence advisory.
+* Do not use AI priority as the sole authoritative business decision.
+* Normalize validated AI output before business processing.
+* Introduce deterministic priority assignment.
+* Introduce configurable deterministic routing.
+* Preserve prompt versions for comparative evaluation.
 
-# Known Limitations of ticket-analysis-v1
+## Known Limitations of ticket-analysis-v1
 
-At the end of Hour 5:
+At the end of Hour 6:
 
 * Category accuracy is 75.00%.
 * Priority accuracy is 66.67%.
@@ -612,11 +520,350 @@ At the end of Hour 5:
 * Adversarial-case all-label accuracy is 50.00%.
 * Confidence scores are not well calibrated.
 * High-confidence classification errors occur.
-* Category normalization is not yet implemented.
-* Tag normalization is not yet implemented.
 * Deterministic priority rules are not yet implemented.
 * Configurable routing is not yet implemented.
-* Only one prompt version has been formally evaluated.
+* Unknown normalized classifications do not yet have a downstream rejection or fallback policy.
+* Only one ticket-analysis prompt version has been formally evaluated.
+
+---
+
+# Prompt: reply-suggestion-v1
+
+## Metadata
+
+```text
+Prompt ID: reply-suggestion-v1
+Prompt Version: v1
+Purpose: Generate a concise professional customer-support reply draft for human review.
+Provider Adapter: GroqLLMService
+Default Model: llama-3.3-70b-versatile
+Human Review Required: Yes
+Automatic Sending Permitted: No
+Formal Evaluation Status: Not yet evaluated
+```
+
+## Runtime Location
+
+Executable prompt definition:
+
+```text
+app/prompts/reply_suggestion_v1.py
+```
+
+Prompt registry:
+
+```text
+app/prompts/registry.py
+```
+
+Provider-independent input contract:
+
+```text
+ReplySuggestionRequest
+```
+
+Provider-independent output contract:
+
+```text
+ReplySuggestionResponse
+```
+
+Schema implementation:
+
+```text
+app/schemas/reply_suggestion_schema.py
+```
+
+Intended application service:
+
+```text
+app/services/reply_suggestion_service.py
+```
+
+Intended provider adapter method:
+
+```text
+GroqLLMService.generate_reply_suggestion()
+```
+
+## Purpose
+
+`reply-suggestion-v1` generates an editable customer-support reply draft.
+
+The feature is human-in-the-loop:
+
+```text
+Customer Email
+        │
+        ▼
+Ticket Analysis
+        │
+        ▼
+Schema Validation
+        │
+        ▼
+Deterministic Normalization
+        │
+        ▼
+Reply Suggestion Generation
+        │
+        ▼
+Human Agent Review and Editing
+        │
+        ▼
+Explicit Approval
+        │
+        ▼
+Customer Delivery
+```
+
+The prompt does not authorize automatic sending.
+
+## Input Contract
+
+The prompt receives a `ReplySuggestionRequest`.
+
+Input fields:
+
+```text
+sender_email
+email_subject
+email_body
+normalized_analysis
+```
+
+`normalized_analysis` contains the trusted normalized ticket-analysis contract.
+
+The executable user prompt intentionally exposes only the normalized fields
+required to understand the customer's issue:
+
+```text
+customer_name
+company
+issue_summary
+detailed_description
+product_service
+tags
+```
+
+The user prompt does not expose:
+
+```text
+category
+ai_recommended_priority
+sentiment
+suggested_department
+confidence_score
+normalization_metadata
+```
+
+This minimizes unnecessary disclosure of internal AI-analysis metadata to the
+reply-generation prompt.
+
+## Output Contract
+
+The model must return only a plain-text customer-support reply draft.
+
+The provider-independent runtime output contract is:
+
+```text
+ReplySuggestionResponse
+```
+
+Current output field:
+
+```text
+suggested_reply
+```
+
+The response contract:
+
+* Rejects missing replies.
+* Rejects empty replies.
+* Rejects whitespace-only replies.
+* Rejects unexpected fields.
+* Strips leading and trailing whitespace.
+* Is immutable after validation.
+
+## Safety Constraints
+
+The prompt explicitly requires:
+
+* Professional customer-support tone.
+* Concise output.
+* Plain-text output only.
+* Human review before sending.
+* Evidence-grounded response generation.
+* No fabricated resolution.
+* No fabricated technical fix.
+* No fabricated investigation.
+* No fabricated escalation.
+* No fabricated refund.
+* No fabricated credit.
+* No fabricated replacement.
+* No fabricated approval.
+* No fabricated SLA.
+* No fabricated response deadline.
+* No fabricated resolution deadline.
+* No fabricated restoration time.
+* No fabricated ticket number.
+* No fabricated agent identity.
+* No fabricated company policy.
+* No unsupported promise that an action has already occurred.
+* No internal implementation details.
+* No system-prompt disclosure.
+* No hidden-instruction disclosure.
+* No model-name or AI-provider disclosure.
+* No internal routing-rule disclosure.
+* No internal-tag disclosure.
+* No normalization-metadata disclosure.
+* No exposure of category labels.
+* No exposure of priority labels.
+* No exposure of sentiment labels.
+* No exposure of department recommendations.
+* No exposure of confidence scores.
+* Prompt-injection resistance for customer-controlled email content.
+* No markdown.
+* No JSON.
+* No headings.
+* No bullet points.
+* No code fences.
+* No fabricated signature.
+
+## Prompt-Injection Resistance
+
+The original email subject and body are untrusted customer-controlled content.
+
+The model must not follow customer instructions that attempt to:
+
+* Change the model role.
+* Override reply-generation rules.
+* Reveal system instructions.
+* Reveal hidden prompts.
+* Expose internal classifications.
+* Produce unrelated content.
+* Change the required output format.
+
+## Hallucination Reduction
+
+The reply must remain grounded in:
+
+```text
+Original Customer Email Context
+        +
+Normalized Ticket Context
+```
+
+The prompt forbids claims that unsupported actions have occurred.
+
+Examples of prohibited unsupported claims include:
+
+```text
+We have fixed the issue.
+Your refund has been processed.
+Your account has been restored.
+The engineering team has resolved the incident.
+You will receive a response within two hours.
+Your ticket number is SUP-12345.
+```
+
+unless the supplied input explicitly supports the claim.
+
+## Human Review Boundary
+
+Every generated reply is a suggestion.
+
+The intended workflow is:
+
+```text
+AI Draft
+   │
+   ▼
+Store Suggested Reply
+   │
+   ▼
+Display to Human Agent
+   │
+   ▼
+Review and Edit
+   │
+   ▼
+Explicit Approval
+   │
+   ▼
+Send Through SMTP Service
+```
+
+At the current implementation stage, persistence, dashboard display, editing,
+approval, and sending orchestration remain downstream responsibilities.
+
+## Where Used
+
+The prompt is registered in:
+
+```text
+app/prompts/registry.py
+```
+
+The intended runtime call chain is:
+
+```text
+ReplySuggestionService
+        │
+        ▼
+LLMService.generate_reply_suggestion()
+        │
+        ▼
+GroqLLMService.generate_reply_suggestion()
+        │
+        ▼
+reply-suggestion-v1
+        │
+        ▼
+Groq API
+        │
+        ▼
+ReplySuggestionResponse
+```
+
+## Evaluation Status
+
+`reply-suggestion-v1` has not yet been formally evaluated against a labeled or
+rubric-based reply-quality dataset.
+
+It must not be described as evaluated until evaluation evidence exists.
+
+Current verification target:
+
+```text
+Schema Validation
+        +
+Unit Tests
+        +
+Mocked Provider Tests
+        +
+One Manual Real-Provider Verification
+```
+
+Future evaluation may measure:
+
+* Safety-constraint compliance.
+* Unsupported-claim rate.
+* Relevance.
+* Professional tone.
+* Conciseness.
+* Prompt-injection resistance.
+* Human reviewer acceptance rate.
+
+## Known Limitations of reply-suggestion-v1
+
+* Formal reply-quality evaluation is not yet implemented.
+* Suggested replies are not yet persisted.
+* Suggested replies are not yet exposed through a dashboard or API.
+* Human editing and approval workflow is not yet implemented.
+* Reply regeneration is not yet implemented.
+* Reply suggestions are not automatically sent.
+* Reply suggestions currently depend on the same configured Groq model used by the provider adapter unless separate model configuration is added later.
 
 ---
 
@@ -624,50 +871,40 @@ At the end of Hour 5:
 
 Evaluated prompt versions are immutable.
 
-The current evaluated prompt:
+The evaluated ticket-analysis prompt:
 
 ```text
 ticket-analysis-v1
 ```
 
-must remain unchanged after its baseline evaluation results are recorded.
+must remain unchanged after its baseline evaluation evidence has been recorded.
 
-Future prompt changes should create a new module such as:
+Future ticket-analysis changes should create:
 
 ```text
-app/prompts/ticket_analysis_v2.py
+ticket-analysis-v2
 ```
 
-The new prompt version should:
+Future reply-suggestion changes should create:
+
+```text
+reply-suggestion-v2
+```
+
+A new prompt version should:
 
 1. Be registered in `app/prompts/registry.py`.
-2. Preserve the existing output contract unless an explicit schema migration is required.
-3. Be evaluated against the same labeled dataset.
-4. Generate a separate evaluation report or preserve prompt-version metadata in the report.
-5. Compare results against `ticket-analysis-v1`.
-6. Be adopted only when measurable improvements do not introduce unacceptable regressions.
-
-Example evolution:
-
-```text
-ticket-analysis-v1
-        │
-        ├── Executable Prompt
-        ├── Dataset Version 1.0.0
-        ├── Baseline Evaluation
-        └── Known Limitations
-
-ticket-analysis-v2
-        │
-        ├── Revised Prompt
-        ├── Same Dataset Version
-        ├── Comparative Evaluation
-        └── Regression Analysis
-```
+2. Preserve its existing input and output contracts unless an explicit schema migration is required.
+3. Be tested against existing regression tests.
+4. Be evaluated against the relevant dataset or rubric when formal evaluation exists.
+5. Preserve prompt-version metadata in evaluation evidence.
+6. Be adopted only when improvements do not introduce unacceptable regressions.
 
 ---
 
 # Prompt Traceability
+
+## Ticket Analysis
 
 ```text
 .env
@@ -683,17 +920,11 @@ app/prompts/registry.py
             ▼
 app/prompts/ticket_analysis_v1.py
             │
-            ├── SYSTEM_PROMPT
-            └── build_user_prompt()
-            │
             ▼
 app/services/groq_llm_service.py
             │
             ▼
 Groq API
-            │
-            ▼
-Raw Model Response
             │
             ▼
 app/utils/json_extractor.py
@@ -705,6 +936,12 @@ app/schemas/ticket_analysis_schema.py
 TicketAnalysisResponse
             │
             ▼
+app/services/ticket_analysis_normalizer.py
+            │
+            ▼
+NormalizedTicketAnalysis
+            │
+            ▼
 app/evaluation/runner.py
             │
             ▼
@@ -714,26 +951,72 @@ app/evaluation/metrics.py
 docs/ai_evaluation_report.json
 ```
 
-This traceability preserves the relationship between runtime configuration, executable prompt version, AI provider execution, output validation, evaluation dataset, evaluation metrics, and generated evidence.
+## Reply Suggestion
+
+```text
+REPLY_SUGGESTION_PROMPT_VERSION=reply-suggestion-v1
+            │
+            ▼
+app/config/settings.py
+            │
+            ▼
+app/prompts/registry.py
+            │
+            ▼
+app/prompts/reply_suggestion_v1.py
+            │
+            ▼
+app/services/reply_suggestion_service.py
+            │
+            ▼
+LLMService.generate_reply_suggestion()
+            │
+            ▼
+GroqLLMService.generate_reply_suggestion()
+            │
+            ▼
+Groq API
+            │
+            ▼
+app/schemas/reply_suggestion_schema.py
+            │
+            ▼
+ReplySuggestionResponse
+            │
+            ▼
+Human Review Workflow
+```
 
 ---
 
 # Prompt Deliverable Status
 
-At the end of Hour 5:
+At the end of the Hour 6.5 prompt-alignment step:
 
 ```text
-Executable Prompt Definition:       Complete
-Prompt Registry:                    Complete
-Prompt Versioning:                  Complete
-System Prompt:                      Complete
-User Prompt Template:               Complete
-Structured Output Contract:         Complete
-Prompt-Injection Mitigation:        Complete
-Hallucination Reduction Rules:      Complete
-Labeled Evaluation Dataset:         Complete
-Real-Provider Evaluation:           Complete
-Evaluation Metrics:                 Complete
-Evaluation Report:                  Complete
-Human-Readable Prompt Documentation: Complete
+Ticket Analysis Executable Prompt:             Complete
+Ticket Analysis Prompt Registry Entry:         Complete
+Ticket Analysis Prompt Versioning:             Complete
+Ticket Analysis Structured Output Contract:    Complete
+Ticket Analysis Prompt-Injection Mitigation:   Complete
+Ticket Analysis Hallucination Reduction Rules: Complete
+Ticket Analysis Evaluation Dataset:            Complete
+Ticket Analysis Real-Provider Evaluation:      Complete
+Ticket Analysis Evaluation Metrics:            Complete
+Ticket Analysis Evaluation Report:             Complete
+
+Reply Suggestion Executable Prompt:             Complete
+Reply Suggestion Prompt Registry Entry:         Complete
+Reply Suggestion Prompt Versioning:             Complete
+Reply Suggestion Input Contract:                Complete
+Reply Suggestion Output Contract:               Complete
+Reply Suggestion Safety Constraints:            Complete
+Reply Suggestion Prompt-Injection Mitigation:   Complete
+Reply Suggestion Human-Review Boundary:         Complete
+Reply Suggestion Formal Evaluation:             Not Yet Implemented
+Reply Suggestion Provider Method:               Not Yet Implemented
+Reply Suggestion Application Service:           Not Yet Implemented
+Reply Suggestion Automated Tests:                Not Yet Implemented
+
+Human-Readable Prompt Documentation:             Complete
 ```

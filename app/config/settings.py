@@ -17,6 +17,19 @@ class Settings(BaseSettings):
     # Prompt configuration
     prompt_version: str = "ticket-analysis-v1"
 
+    reply_suggestion_prompt_version: str = "reply-suggestion-v1"
+
+    reply_suggestion_max_tokens: int = Field(
+        default=500,
+        ge=1,
+    )
+
+    reply_suggestion_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=2.0,
+    )
+
     # Database configuration
     database_url: str
 

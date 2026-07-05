@@ -118,6 +118,7 @@ class WorkflowService:
                 analysis=normalized_analysis,
                 priority_decision=priority_decision,
                 routing_decision=routing_decision,
+                reply_suggestion=reply_suggestion,
             )
 
             processed_at = datetime.now(timezone.utc)

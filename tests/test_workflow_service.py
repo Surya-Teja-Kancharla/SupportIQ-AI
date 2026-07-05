@@ -106,9 +106,14 @@ def build_routing_decision() -> RoutingDecision:
     )
 
 
-def build_reply_suggestion():
-    return Mock(spec=ReplySuggestionResponse)
-
+def build_reply_suggestion() -> ReplySuggestionResponse:
+    return ReplySuggestionResponse(
+        suggested_reply=(
+            "Hello Customer, we are investigating the production "
+            "payment API outage and will provide updates as soon as possible."
+        )
+    )
+    
 
 def build_ticket_creation_result() -> TicketCreationResult:
     return TicketCreationResult(
@@ -308,6 +313,7 @@ def test_process_email_creates_ticket():
         analysis=context.normalized_analysis,
         priority_decision=context.priority_decision,
         routing_decision=context.routing_decision,
+        reply_suggestion=context.reply_suggestion,
     )
 
 

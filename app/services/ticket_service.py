@@ -17,6 +17,7 @@ from app.schemas.ticket_decision_schema import (
 )
 from app.schemas.ticket_workflow_schema import TicketCreationResult
 
+from app.schemas.reply_suggestion_schema import ReplySuggestionResponse
 
 def _generate_ticket_number() -> str:
     """
@@ -61,6 +62,7 @@ class TicketService:
         analysis: NormalizedTicketAnalysis,
         priority_decision: PriorityDecision,
         routing_decision: RoutingDecision,
+        reply_suggestion: ReplySuggestionResponse,
     ) -> TicketCreationResult:
         """
         Create the ticket persistence aggregate.
@@ -89,11 +91,13 @@ class TicketService:
             description=analysis.detailed_description,
             category=analysis.category,
             priority=priority_decision.final_priority,
+            priority_reason=priority_decision.applied_rule,
             sentiment=analysis.sentiment,
             product=analysis.product_service,
             suggested_department=analysis.suggested_department,
             assigned_team=routing_decision.assigned_team,
             confidence_score=analysis.confidence_score,
+            suggested_reply=reply_suggestion.suggested_reply,
             status="Open",
             received_at=email.received_at,
         )

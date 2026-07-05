@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>
+        {{ ticket.ticket_number }} | SupportIQ
+    </title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f7fa;
+            color: #1f2937;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 20px 32px;
+        }
+
+        main {
+            padding: 32px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .content {
+            white-space: pre-wrap;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+<header>
+    <h1>SupportIQ Agent Dashboard</h1>
+
+    <p>
+        Ticket Detail:
+        {{ ticket.ticket_number }}
+    </p>
+</header>
+
+<main>
+    <p>
+        <a href="/dashboard/tickets">
+            Back to Ticket List
+        </a>
+    </p>
+
+    <section class="card">
+        <h2>Ticket Information</h2>
+
+        <div class="grid">
+            <div>
+                <span class="label">Ticket Number:</span>
+                {{ ticket.ticket_number }}
+            </div>
+
+            <div>
+                <span class="label">Status:</span>
+                {{ ticket.status }}
+            </div>
+
+            <div>
+                <span class="label">Priority:</span>
+                {{ ticket.priority }}
+            </div>
+
+            <div>
+                <span class="label">Category:</span>
+                {{ ticket.category }}
+            </div>
+
+            <div>
+                <span class="label">Assigned Team:</span>
+                {{ ticket.assigned_team }}
+            </div>
+
+            <div>
+                <span class="label">AI Confidence:</span>
+
+                {% if ticket.confidence_score is not none %}
+                    {{ "%.2f"|format(ticket.confidence_score) }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Customer Information</h2>
+
+        <p>
+            <span class="label">Name:</span>
+            {{ ticket.customer_name or "Unknown" }}
+        </p>
+
+        <p>
+            <span class="label">Company:</span>
+            {{ ticket.company or "Unknown" }}
+        </p>
+
+        <p>
+            <span class="label">Email:</span>
+            {{ ticket.sender_email }}
+        </p>
+    </section>
+
+    <section class="card">
+        <h2>Issue Details</h2>
+
+        <p>
+            <span class="label">Subject:</span>
+            {{ ticket.email_subject }}
+        </p>
+
+        <p>
+            <span class="label">Issue Summary:</span>
+            {{ ticket.issue_summary }}
+        </p>
+
+        <p>
+            <span class="label">Detailed Description:</span>
+        </p>
+
+        <div class="content">
+            {{ ticket.detailed_description }}
+        </div>
+
+        <p>
+            <span class="label">Original Email:</span>
+        </p>
+
+        <div class="content">
+            {{ ticket.original_email_body }}
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>AI Decision Context</h2>
+
+        <p>
+            <span class="label">Sentiment:</span>
+            {{ ticket.sentiment or "Unknown" }}
+        </p>
+
+        <p>
+            <span class="label">Product or Service:</span>
+            {{ ticket.product_or_service or "Unknown" }}
+        </p>
+
+        <p>
+            <span class="label">Suggested Department:</span>
+            {{ ticket.suggested_department or "Unknown" }}
+        </p>
+
+        <p>
+            <span class="label">Priority Reason:</span>
+            {{ ticket.priority_reason or "Not available" }}
+        </p>
+    </section>
+
+    <section class="card">
+        <h2>Suggested Reply</h2>
+
+        <div class="content">
+            {{ ticket.suggested_reply or "No suggested reply available." }}
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Attachments</h2>
+
+        {% if ticket.attachments %}
+        <table>
+            <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Content Type</th>
+                <th>Size</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            {% for attachment in ticket.attachments %}
+            <tr>
+                <td>{{ attachment.filename }}</td>
+                <td>{{ attachment.content_type }}</td>
+                <td>{{ attachment.size_bytes }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+        <p>No attachments.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Audit Events</h2>
+
+        {% if ticket.audit_events %}
+        <table>
+            <thead>
+            <tr>
+                <th>Event</th>
+                <th>Actor</th>
+                <th>Created</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            {% for event in ticket.audit_events %}
+            <tr>
+                <td>{{ event.event_type }}</td>
+                <td>{{ event.actor or "System" }}</td>
+                <td>{{ event.created_at }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+        <p>No audit events.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Workflow Monitoring</h2>
+
+        {% if ticket.workflow_execution %}
+        <div class="grid">
+            <div>
+                <span class="label">Status:</span>
+                {{ ticket.workflow_execution.status }}
+            </div>
+
+            <div>
+                <span class="label">Failure Stage:</span>
+                {{
+                    ticket.workflow_execution.failure_stage
+                    or "None"
+                }}
+            </div>
+
+            <div>
+                <span class="label">Error Type:</span>
+                {{
+                    ticket.workflow_execution.error_type
+                    or "None"
+                }}
+            </div>
+
+            <div>
+                <span class="label">Started:</span>
+                {{ ticket.workflow_execution.started_at }}
+            </div>
+
+            <div>
+                <span class="label">Completed:</span>
+                {{
+                    ticket.workflow_execution.completed_at
+                    or "In progress"
+                }}
+            </div>
+        </div>
+
+        {% if ticket.workflow_execution.error_message %}
+        <p>
+            <span class="label">Error Message:</span>
+            {{ ticket.workflow_execution.error_message }}
+        </p>
+        {% endif %}
+
+        {% else %}
+        <p>No workflow execution record available.</p>
+        {% endif %}
+    </section>
+</main>
+</body>
+</html>

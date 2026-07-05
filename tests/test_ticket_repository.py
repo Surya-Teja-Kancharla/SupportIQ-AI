@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -156,3 +157,139 @@ def test_repository_does_not_commit_transaction(
     repository.add(ticket)
 
     session.commit.assert_not_called()
+
+def test_list_tickets_returns_repository_results():
+    session = Mock()
+
+    ticket_one = SimpleNamespace(id=2)
+    ticket_two = SimpleNamespace(id=1)
+
+    session.scalars.return_value = [
+        ticket_one,
+        ticket_two,
+    ]
+
+    repository = TicketRepository(session)
+
+    result = repository.list_tickets()
+
+    assert result == [ticket_one, ticket_two]
+    session.scalars.assert_called_once()
+
+
+def test_list_tickets_supports_all_dashboard_filters():
+    session = Mock()
+    session.scalars.return_value = []
+
+    repository = TicketRepository(session)
+
+    repository.list_tickets(
+        status="open",
+        priority="Critical",
+        category="Technical Support",
+        assigned_team="Technical Support",
+        limit=25,
+        offset=10,
+    )
+
+    statement = session.scalars.call_args.args[0]
+    compiled = statement.compile()
+
+    assert len(compiled.params) == 6
+    assert "tickets.status" in str(statement)
+    assert "tickets.priority" in str(statement)
+    assert "tickets.category" in str(statement)
+    assert "tickets.assigned_team" in str(statement)
+    assert "LIMIT" in str(statement)
+    assert "OFFSET" in str(statement)
+
+
+def test_list_tickets_uses_newest_first_deterministic_order():
+    session = Mock()
+    session.scalars.return_value = []
+
+    repository = TicketRepository(session)
+
+    repository.list_tickets()
+
+    statement = session.scalars.call_args.args[0]
+    statement_text = str(statement)
+
+    assert "tickets.received_at DESC" in statement_text
+    assert "tickets.id DESC" in statement_text
+
+
+def test_list_tickets_returns_empty_list():
+    session = Mock()
+    session.scalars.return_value = []
+
+    repository = TicketRepository(session)
+
+    assert repository.list_tickets() == []
+
+
+def test_list_tickets_translates_sqlalchemy_error():
+    session = Mock()
+    session.scalars.side_effect = SQLAlchemyError(
+        "database unavailable"
+    )
+
+    repository = TicketRepository(session)
+
+    with pytest.raises(RepositoryError):
+        repository.list_tickets()
+
+
+def test_count_tickets_returns_count():
+    session = Mock()
+    session.scalar.return_value = 17
+
+    repository = TicketRepository(session)
+
+    result = repository.count_tickets()
+
+    assert result == 17
+    session.scalar.assert_called_once()
+
+
+def test_count_tickets_supports_all_dashboard_filters():
+    session = Mock()
+    session.scalar.return_value = 4
+
+    repository = TicketRepository(session)
+
+    result = repository.count_tickets(
+        status="open",
+        priority="High",
+        category="Billing",
+        assigned_team="Finance",
+    )
+
+    statement = session.scalar.call_args.args[0]
+
+    assert result == 4
+    assert "tickets.status" in str(statement)
+    assert "tickets.priority" in str(statement)
+    assert "tickets.category" in str(statement)
+    assert "tickets.assigned_team" in str(statement)
+
+
+def test_count_tickets_returns_zero_for_none():
+    session = Mock()
+    session.scalar.return_value = None
+
+    repository = TicketRepository(session)
+
+    assert repository.count_tickets() == 0
+
+
+def test_count_tickets_translates_sqlalchemy_error():
+    session = Mock()
+    session.scalar.side_effect = SQLAlchemyError(
+        "database unavailable"
+    )
+
+    repository = TicketRepository(session)
+
+    with pytest.raises(RepositoryError):
+        repository.count_tickets()

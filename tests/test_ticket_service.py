@@ -8,6 +8,7 @@ from app.schemas.normalized_ticket_schema import (
     NormalizationMetadata,
     NormalizedTicketAnalysis,
 )
+from app.schemas.reply_suggestion_schema import ReplySuggestionResponse
 from app.schemas.ticket_decision_schema import (
     PriorityDecision,
     RoutingDecision,
@@ -94,6 +95,15 @@ def build_routing_decision() -> RoutingDecision:
     )
 
 
+def build_reply_suggestion() -> ReplySuggestionResponse:
+    return ReplySuggestionResponse(
+        suggested_reply=(
+            "Hello Customer, we are investigating the production "
+            "payment API outage and will provide updates as soon as possible."
+        )
+    )
+
+
 def build_service():
     ticket_repository = Mock()
     attachment_repository = Mock()
@@ -119,15 +129,20 @@ def build_service():
     )
 
 
-def test_create_ticket_persists_ticket():
-    service, ticket_repository, _, _ = build_service()
-
-    service.create_ticket(
+def create_ticket(service: TicketService):
+    return service.create_ticket(
         build_email(),
         build_analysis(),
         build_priority_decision(),
         build_routing_decision(),
+        build_reply_suggestion(),
     )
+
+
+def test_create_ticket_persists_ticket():
+    service, ticket_repository, _, _ = build_service()
+
+    create_ticket(service)
 
     ticket_repository.create.assert_called_once()
 
@@ -135,12 +150,7 @@ def test_create_ticket_persists_ticket():
 def test_create_ticket_uses_final_priority():
     service, ticket_repository, _, _ = build_service()
 
-    service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    create_ticket(service)
 
     ticket = ticket_repository.create.call_args.args[0]
 
@@ -150,27 +160,42 @@ def test_create_ticket_uses_final_priority():
 def test_create_ticket_uses_assigned_team():
     service, ticket_repository, _, _ = build_service()
 
-    service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    create_ticket(service)
 
     ticket = ticket_repository.create.call_args.args[0]
 
     assert ticket.assigned_team == "Technical Support"
 
 
+def test_create_ticket_persists_priority_reason():
+    service, ticket_repository, _, _ = build_service()
+
+    create_ticket(service)
+
+    ticket = ticket_repository.create.call_args.args[0]
+
+    assert ticket.priority_reason == (
+        "Matched Critical priority business rule: production outage"
+    )
+
+
+def test_create_ticket_persists_suggested_reply():
+    service, ticket_repository, _, _ = build_service()
+
+    create_ticket(service)
+
+    ticket = ticket_repository.create.call_args.args[0]
+
+    assert ticket.suggested_reply == (
+        "Hello Customer, we are investigating the production "
+        "payment API outage and will provide updates as soon as possible."
+    )
+
+
 def test_create_ticket_persists_all_attachments():
     service, _, attachment_repository, _ = build_service()
 
-    service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    create_ticket(service)
 
     assert attachment_repository.create.call_count == 2
 
@@ -178,12 +203,7 @@ def test_create_ticket_persists_all_attachments():
 def test_create_ticket_creates_ticket_created_audit_event():
     service, _, _, audit_repository = build_service()
 
-    service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    create_ticket(service)
 
     audit_repository.create.assert_called_once()
 
@@ -196,12 +216,7 @@ def test_create_ticket_creates_ticket_created_audit_event():
 def test_create_ticket_returns_creation_result():
     service, _, _, _ = build_service()
 
-    result = service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    result = create_ticket(service)
 
     assert result.ticket_id == 101
     assert result.ticket_number == "SUP-20260705-TEST0001"
@@ -218,6 +233,7 @@ def test_create_ticket_does_not_mutate_email():
         build_analysis(),
         build_priority_decision(),
         build_routing_decision(),
+        build_reply_suggestion(),
     )
 
     assert email == original_email
@@ -234,6 +250,7 @@ def test_create_ticket_does_not_mutate_analysis():
         analysis,
         build_priority_decision(),
         build_routing_decision(),
+        build_reply_suggestion(),
     )
 
     assert analysis == original_analysis
@@ -244,12 +261,7 @@ def test_create_ticket_repository_calls_are_limited_to_persistence_operations():
         build_service()
     )
 
-    service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    create_ticket(service)
 
     assert ticket_repository.create.call_count == 1
     assert attachment_repository.create.call_count == 2
@@ -259,12 +271,7 @@ def test_create_ticket_repository_calls_are_limited_to_persistence_operations():
 def test_create_ticket_uses_deterministic_injected_ticket_number():
     service, ticket_repository, _, _ = build_service()
 
-    service.create_ticket(
-        build_email(),
-        build_analysis(),
-        build_priority_decision(),
-        build_routing_decision(),
-    )
+    create_ticket(service)
 
     ticket = ticket_repository.create.call_args.args[0]
 

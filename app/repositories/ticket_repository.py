@@ -1,3 +1,7 @@
+from collections.abc import Sequence
+
+from sqlalchemy import func, select
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -59,4 +63,102 @@ class TicketRepository:
         except SQLAlchemyError as exc:
             raise RepositoryError(
                 "Ticket lookup failed."
+            ) from exc
+
+    def list_tickets(
+        self,
+        *,
+        status: str | None = None,
+        priority: str | None = None,
+        category: str | None = None,
+        assigned_team: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Ticket]:
+        """
+        Return tickets matching optional dashboard filters.
+
+        Results are ordered newest first with ID as a deterministic
+        secondary ordering key.
+        """
+
+        try:
+            statement = select(Ticket)
+
+            if status is not None:
+                statement = statement.where(
+                    Ticket.status == status
+                )
+
+            if priority is not None:
+                statement = statement.where(
+                    Ticket.priority == priority
+                )
+
+            if category is not None:
+                statement = statement.where(
+                    Ticket.category == category
+                )
+
+            if assigned_team is not None:
+                statement = statement.where(
+                    Ticket.assigned_team == assigned_team
+                )
+
+            statement = (
+                statement
+                .order_by(
+                    Ticket.received_at.desc(),
+                    Ticket.id.desc(),
+                )
+                .limit(limit)
+                .offset(offset)
+            )
+
+            return list(self._session.scalars(statement))
+
+        except SQLAlchemyError as exc:
+            raise RepositoryError(
+                "Ticket listing failed."
+            ) from exc
+
+
+    def count_tickets(
+        self,
+        *,
+        status: str | None = None,
+        priority: str | None = None,
+        category: str | None = None,
+        assigned_team: str | None = None,
+    ) -> int:
+        """Count tickets matching optional dashboard filters."""
+
+        try:
+            statement = select(func.count(Ticket.id))
+
+            if status is not None:
+                statement = statement.where(
+                    Ticket.status == status
+                )
+
+            if priority is not None:
+                statement = statement.where(
+                    Ticket.priority == priority
+                )
+
+            if category is not None:
+                statement = statement.where(
+                    Ticket.category == category
+                )
+
+            if assigned_team is not None:
+                statement = statement.where(
+                    Ticket.assigned_team == assigned_team
+                )
+
+            return int(self._session.scalar(statement) or 0)
+
+        except SQLAlchemyError as exc:
+            raise RepositoryError(
+                "Ticket count failed."
             ) from exc

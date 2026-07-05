@@ -15,7 +15,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
-
 if TYPE_CHECKING:
     from app.models.ticket_attachment import TicketAttachment
     from app.models.ticket_audit_log import TicketAuditLog
@@ -141,4 +140,14 @@ class Ticket(Base):
         back_populates="ticket",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+
+    priority_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    suggested_reply: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )

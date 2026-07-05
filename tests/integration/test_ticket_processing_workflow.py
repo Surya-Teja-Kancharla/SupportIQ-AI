@@ -52,8 +52,13 @@ def build_ai_analysis() -> TicketAnalysisResponse:
     )
 
 
-def build_reply_suggestion():
-    return Mock(spec=ReplySuggestionResponse)
+def build_reply_suggestion() -> ReplySuggestionResponse:
+    return ReplySuggestionResponse(
+        suggested_reply=(
+            "Hello Customer, we are investigating the production "
+            "service outage and will provide updates as soon as possible."
+        )
+    )
 
 
 def build_workflow():
@@ -143,6 +148,15 @@ def test_complete_ticket_processing_workflow_succeeds():
 
     assert persisted_ticket.priority == "Critical"
     assert persisted_ticket.assigned_team == "Technical Support"
+
+    assert persisted_ticket.priority_reason == (
+        result.priority_decision.applied_rule
+    )
+
+    assert persisted_ticket.suggested_reply == (
+        "Hello Customer, we are investigating the production "
+        "service outage and will provide updates as soon as possible."
+    )
 
     assert persisted_audit.ticket_id == 501
     assert persisted_audit.action == "ticket_created"

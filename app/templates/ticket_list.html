@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>SupportIQ Agent Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f7fa;
+            color: #1f2937;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 20px 32px;
+        }
+
+        main {
+            padding: 32px;
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        input,
+        select,
+        button {
+            padding: 8px 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .empty-state {
+            padding: 24px;
+            text-align: center;
+        }
+
+        .pagination {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+<header>
+    <h1>SupportIQ Agent Dashboard</h1>
+    <p>AI-assisted support ticket monitoring and triage</p>
+</header>
+
+<main>
+    <h2>Ticket List</h2>
+
+    <form
+        class="filters"
+        method="get"
+        action="/dashboard/tickets"
+    >
+        <input
+            type="text"
+            name="status"
+            placeholder="Status"
+            value="{{ filters.status or '' }}"
+        >
+
+        <input
+            type="text"
+            name="priority"
+            placeholder="Priority"
+            value="{{ filters.priority or '' }}"
+        >
+
+        <input
+            type="text"
+            name="category"
+            placeholder="Category"
+            value="{{ filters.category or '' }}"
+        >
+
+        <input
+            type="text"
+            name="assigned_team"
+            placeholder="Assigned Team"
+            value="{{ filters.assigned_team or '' }}"
+        >
+
+        <input
+            type="number"
+            name="limit"
+            min="1"
+            max="100"
+            value="{{ result.limit }}"
+        >
+
+        <button type="submit">
+            Apply Filters
+        </button>
+    </form>
+
+    <p>
+        Total Tickets:
+        <strong>{{ result.total }}</strong>
+    </p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Ticket</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Category</th>
+            <th>Assigned Team</th>
+            <th>AI Confidence</th>
+            <th>Received</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        {% for ticket in result.tickets %}
+        <tr>
+            <td>
+                <a
+                    href="/dashboard/tickets/{{ ticket.id }}"
+                >
+                    {{ ticket.ticket_number }}
+                </a>
+            </td>
+
+            <td>{{ ticket.email_subject }}</td>
+            <td>{{ ticket.status }}</td>
+            <td>{{ ticket.priority }}</td>
+            <td>{{ ticket.category }}</td>
+            <td>{{ ticket.assigned_team }}</td>
+
+            <td>
+                {% if ticket.confidence_score is not none %}
+                    {{ "%.2f"|format(ticket.confidence_score) }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </td>
+
+            <td>{{ ticket.received_at }}</td>
+        </tr>
+
+        {% else %}
+        <tr>
+            <td
+                colspan="8"
+                class="empty-state"
+            >
+                No tickets found.
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        Showing offset {{ result.offset }}
+        with limit {{ result.limit }}.
+    </div>
+</main>
+</body>
+</html>

@@ -51,3 +51,21 @@ class WorkflowExecutionRepository:
             raise RepositoryError(
                 "Workflow-execution lookup failed."
             ) from exc
+
+    def get_by_ticket_id(
+        self,
+        ticket_id: int,
+    ) -> WorkflowExecution | None:
+        """Return the workflow execution associated with a ticket."""
+
+        try:
+            statement = select(WorkflowExecution).where(
+                WorkflowExecution.ticket_id == ticket_id
+            )
+
+            return self._session.scalar(statement)
+
+        except SQLAlchemyError as exc:
+            raise RepositoryError(
+                "Workflow-execution lookup failed."
+            ) from exc

@@ -11,5 +11,12 @@ CATEGORY_TEAM_ROUTES = MappingProxyType(
         "Account Access": "Customer Success",
         "Refund Request": "Finance",
         "General Inquiry": "Customer Success",
+
+        # Hour 16 classification evaluation categories
+        "Cancellation": "Customer Success",
+        "Complaint": "Customer Success",
+        "Product Inquiry": "Product Support",
+        "Refund": "Billing",
+        "Sales": "Sales",
     }
 )

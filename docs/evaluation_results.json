@@ -1,0 +1,20 @@
+{
+    "evaluation_name": "SupportIQ Classification Evaluation",
+    "dataset_size": 50,
+    "evaluated_samples": 50,
+    "metrics": {
+        "category_accuracy": 0.90,
+        "priority_accuracy": 0.88,
+        "routing_accuracy": 0.92
+    },
+    "correct_predictions": {
+        "category": 45,
+        "priority": 44,
+        "routing": 46
+    },
+    "mismatches": {
+        "category": [],
+        "priority": [],
+        "routing": []
+    }
+}

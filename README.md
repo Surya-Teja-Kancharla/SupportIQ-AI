@@ -4047,7 +4047,9 @@ The completed repository will contain:
 * Priority rules are currently configured as application-level phrase collections.
 * Team routing uses configurable category-to-team mappings.
 * Unsupported routing categories are rejected explicitly rather than silently assigned to a fallback team.
-* Priority and routing decisions are not yet persisted until the database repository and transaction layers are implemented.
+* Priority and routing decisions are not yet persisted by the complete workflow; repository infrastructure now exists, while end-to-end persistence orchestration is deferred to Hour 9.
+* Repository methods participate in caller-owned transactions and do not commit independently.
+* Email Message-ID values are persisted through workflow-execution records as the foundation for idempotent processing.
 * Support agents will remain able to review and override automated decisions.
 * Incoming attachments are untrusted input.
 * Runtime customer data, attachments, credentials, and logs must not be committed to Git.

@@ -22,7 +22,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * Auditability
 * Security and data privacy
 
-> **Current Development Status:** Hours 1–3 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation/storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, manual Gmail integration testing, and 36 passing automated tests.
+> **Current Development Status:** Hours 1–4 completed — project foundation, PostgreSQL schema, centralized configuration, secure IMAP email ingestion, MIME parsing, attachment validation/storage, email ingestion orchestration, SMTP transport, structured JSON logging, centralized application exceptions, reusable retry infrastructure, Groq API integration, provider-independent LLM service boundary, versioned prompt architecture, structured ticket-analysis contracts, robust JSON extraction, AI response validation, selective LLM retry integration, provider failure classification, and 58 passing automated tests.
 
 ---
 
@@ -39,6 +39,7 @@ The system follows a production-oriented modular monolith architecture emphasizi
 * [Database Design](#database-design)
 * [Email Infrastructure Architecture](#email-infrastructure-architecture)
 * [Email Ingestion Orchestration](#email-ingestion-orchestration)
+* [AI Analysis Architecture](#ai-analysis-architecture)
 * [SMTP Transport](#smtp-transport)
 * [Exception Architecture](#exception-architecture)
 * [Retry Infrastructure](#retry-infrastructure)
@@ -283,15 +284,98 @@ Completed:
 * Full regression suite verification.
 * Application-wide coverage measurement.
 
+### Hour 4 — Groq Integration, LLM Architecture, Structured AI Analysis, and Resilience
+
+Completed:
+
+* Groq Python SDK integration.
+* Centralized Groq API configuration.
+* Configurable Groq model selection.
+* Configurable LLM request timeout.
+* Configurable maximum token output.
+* Configurable LLM temperature.
+* Configurable maximum LLM retries.
+* Provider-independent `LLMService` abstraction.
+* Groq-specific `GroqLLMService` adapter.
+* Separation of application workflow logic from the concrete AI provider.
+* Versioned ticket-analysis prompt architecture.
+* Prompt registry for explicit prompt selection.
+* Immutable prompt-version preservation strategy.
+* Dedicated system prompt and user prompt construction.
+* Explicit support-ticket category vocabulary.
+* Explicit priority vocabulary.
+* Explicit sentiment vocabulary.
+* Explicit department vocabulary.
+* Prompt instructions for JSON-only responses.
+* Prompt instructions for null handling.
+* Prompt instructions to reduce unsupported inference and hallucination.
+* Confidence-score guidance.
+* Prompt-injection mitigation instructions.
+* Explicit treatment of email and attachment content as untrusted data.
+* Structured `TicketAnalysisRequest` schema.
+* Structured `TicketAnalysisResponse` schema.
+* Strict Pydantic AI response validation.
+* Rejection of unexpected AI response fields.
+* Confidence-score range validation.
+* Robust JSON object extraction.
+* Direct JSON parsing support.
+* JSON extraction from markdown code fences.
+* JSON extraction from responses containing surrounding text.
+* Correct handling of braces embedded inside JSON string values.
+* Rejection of empty AI responses.
+* Rejection of JSON arrays when an object is required.
+* Rejection of responses without a valid JSON object.
+* LLM-specific application exception hierarchy.
+* Integration of LLM failures into the existing `SupportIQError` hierarchy.
+* Explicit distinction between retryable and non-retryable LLM failures.
+* Timeout failure classification.
+* Rate-limit failure classification.
+* Authentication failure classification.
+* Connection failure classification.
+* HTTP 4xx request failure classification.
+* HTTP 5xx provider failure classification.
+* Invalid completion structure handling.
+* Empty completion content handling.
+* Malformed JSON handling.
+* Schema-invalid AI response handling.
+* Selective integration with the reusable retry executor.
+* Retry of LLM timeouts.
+* Retry of provider rate limits.
+* Retry of connection failures.
+* Retry of HTTP 5xx provider failures.
+* Immediate failure for authentication errors.
+* Immediate failure for non-retryable HTTP 4xx errors.
+* Immediate failure for malformed AI output.
+* Immediate failure for schema-invalid AI output.
+* Preservation of typed LLM failures after retry exhaustion.
+* Mocked Groq provider unit tests without consuming API quota.
+* Focused Hour 4 automated test verification.
+* Full application regression test verification.
+
 ### Automated Testing Status
 
 ```text
-36 tests passed
+58 tests passed
 1 third-party dependency deprecation warning
-77% application-wide statement coverage
+0 test failures
+0 regressions
+```
+
+Focused Hour 4 AI infrastructure test suite:
+
+```text
+22 tests passed in 0.31s
+```
+
+Full application regression suite:
+
+```text
+58 tests passed in 0.62s
 ```
 
 The warning originates from the BeautifulSoup/lxml HTML parser dependency and does not affect application functionality.
+
+A controlled real Groq API smoke test remains recommended as integration verification before the AI evaluation and prompt-quality work performed during Hour 5.
 
 ---
 
@@ -459,11 +543,9 @@ Implemented capabilities:
 * Dependency injection for sleep and random functions.
 * Deterministic unit testing.
 
-Current boundary:
+The retry executor is now selectively integrated into the Groq LLM provider adapter (see [AI Analysis Architecture](#ai-analysis-architecture)).
 
-The retry executor is implemented and tested but is not yet automatically invoked by the IMAP and SMTP transport services.
-
-Transport-level retry integration will be added at an orchestration boundary to avoid retrying permanent failures such as authentication errors, validation failures, and rejected recipients.
+Transport-level retry integration for IMAP and SMTP has not yet been added.
 
 ### Structured Logging
 
@@ -509,8 +591,77 @@ Pydantic schemas currently represent:
 * Ingestion failures.
 * Per-message processing results.
 * Batch ingestion results.
+* Ticket-analysis requests.
+* Ticket-analysis responses.
 
 These models establish validated contracts between application layers.
+
+### Provider-Independent LLM Service Boundary
+
+The application defines an abstract `LLMService` contract for support-ticket analysis.
+
+The concrete Groq integration is implemented by `GroqLLMService`.
+
+This design prevents the ticket-processing workflow from becoming directly coupled to the Groq SDK.
+
+### Versioned Prompt Architecture
+
+SupportIQ AI stores ticket-analysis prompts as versioned application artifacts.
+
+The current prompt:
+
+```text
+ticket-analysis-v1
+```
+
+defines:
+
+* Classification vocabularies.
+* Output schema requirements.
+* JSON-only response requirements.
+* Null semantics.
+* Confidence-score guidance.
+* Hallucination-reduction instructions.
+* Prompt-injection mitigation instructions.
+* Explicit untrusted-data boundaries.
+
+Prompt versions are selected through a central registry.
+
+### Robust AI Response Processing
+
+LLM responses are never trusted directly.
+
+The processing pipeline performs:
+
+* Response structure inspection.
+* Empty-content detection.
+* JSON object extraction.
+* JSON object-type validation.
+* Pydantic schema validation.
+* Unexpected-field rejection.
+* Confidence-score range validation.
+* Translation into a typed `TicketAnalysisResponse`.
+
+### Selective LLM Retry Integration
+
+The generic retry infrastructure is now integrated into the Groq provider adapter.
+
+Retryable failures include:
+
+* Request timeouts.
+* Rate-limit failures.
+* Connection failures.
+* HTTP 5xx provider failures.
+
+Non-retryable failures include:
+
+* Authentication failures.
+* HTTP 4xx request failures.
+* Empty model responses.
+* Malformed JSON.
+* Schema-invalid model responses.
+
+This avoids wasting API quota and processing time retrying permanent failures.
 
 ---
 
@@ -526,10 +677,12 @@ These models establish validated contracts between application layers.
 
 ### AI Provider
 
-Planned:
-
 * Groq API
+* Groq Python SDK
 * Llama 3.3 70B Versatile
+* Provider-independent `LLMService` abstraction
+* Versioned prompt registry
+* Pydantic structured-response validation
 
 ### Database
 
@@ -559,6 +712,11 @@ Planned:
 * Jitter support
 * Python standard-library logging
 * Structured JSON logs
+* Typed LLM exception hierarchy
+* Selective provider retry integration
+* LLM timeout handling
+* LLM rate-limit handling
+* HTTP 4xx/5xx failure classification
 
 ### Scheduling
 
@@ -638,7 +796,7 @@ LLM Service Boundary
 Ticket Analysis Workflow
 ```
 
-The application will depend on an LLM service abstraction rather than coupling the complete workflow directly to Groq.
+The application depends on an `LLMService` abstraction rather than coupling the complete workflow directly to Groq.
 
 ---
 
@@ -667,23 +825,29 @@ SupportIQ-AI/
 │   ├── models/
 │   │   └── __init__.py
 │   ├── prompts/
-│   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   ├── registry.py
+│   │   └── ticket_analysis_v1.py
 │   ├── scheduler/
 │   │   └── __init__.py
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── email_schema.py
 │   │   ├── ingestion_schema.py
-│   │   └── smtp_schema.py
+│   │   ├── smtp_schema.py
+│   │   └── ticket_analysis_schema.py
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── attachment_service.py
 │   │   ├── email_ingestion_service.py
 │   │   ├── email_parser.py
+│   │   ├── groq_llm_service.py
 │   │   ├── imap_service.py
+│   │   ├── llm_service.py
 │   │   └── smtp_service.py
 │   └── utils/
-│       └── __init__.py
+│       ├── __init__.py
+│       └── json_extractor.py
 ├── docs/
 ├── folder_structure.txt
 ├── logs/
@@ -699,8 +863,11 @@ SupportIQ-AI/
 │   ├── test_attachment_service.py
 │   ├── test_email_ingestion_service.py
 │   ├── test_email_parser.py
+│   ├── test_groq_llm_service.py
+│   ├── test_json_extractor.py
 │   ├── test_retry.py
-│   └── test_smtp_service.py
+│   ├── test_smtp_service.py
+│   └── test_ticket_analysis_schema.py
 ├── uploads/
 │   ├── attachments/
 │   └── emails/
@@ -906,6 +1073,175 @@ Acknowledgement
   ↓
 Mark Email as Processed
 ```
+
+---
+
+## AI Analysis Architecture
+
+SupportIQ AI isolates AI-provider infrastructure from the application workflow through a provider-independent service contract.
+
+```text
+ParsedEmail
+    │
+    ▼
+TicketAnalysisRequest
+    │
+    ▼
+Prompt Registry
+    │
+    ├── Prompt Name
+    ├── Prompt Version
+    ├── System Prompt
+    └── User Prompt Builder
+    │
+    ▼
+LLMService
+    │
+    ▼
+GroqLLMService
+    │
+    ├── Groq API Client
+    ├── Timeout Handling
+    ├── Rate-Limit Handling
+    ├── HTTP Failure Classification
+    └── Selective Retry Execution
+    │
+    ▼
+Raw Model Response
+    │
+    ▼
+JSON Object Extraction
+    │
+    ▼
+Pydantic Schema Validation
+    │
+    ▼
+TicketAnalysisResponse
+```
+
+Application workflow code depends on:
+
+```text
+LLMService
+```
+
+rather than directly depending on:
+
+```text
+Groq
+```
+
+This service boundary reduces provider coupling and allows a different LLM provider to be introduced without redesigning the downstream ticket-processing workflow.
+
+### Structured Ticket Analysis
+
+The AI analysis contract currently produces:
+
+* Customer name.
+* Company.
+* Issue summary.
+* Detailed issue description.
+* Issue category.
+* Recommended priority.
+* Sentiment.
+* Product or service.
+* Suggested department.
+* Suggested tags.
+* Confidence score.
+
+AI output is treated as untrusted data.
+
+Every response must pass through:
+
+```text
+Raw Provider Output
+        │
+        ▼
+JSON Extraction
+        │
+        ▼
+Object-Type Validation
+        │
+        ▼
+TicketAnalysisResponse Validation
+        │
+        ▼
+Validated Structured Analysis
+```
+
+The validated AI response will later pass through deterministic category normalization, priority assignment, routing, and persistence layers.
+
+### Prompt Versioning
+
+Ticket-analysis prompts are explicitly versioned.
+
+Current version:
+
+```text
+ticket-analysis-v1
+```
+
+Prompt definitions contain:
+
+* Prompt name.
+* Prompt version.
+* System prompt.
+* User prompt builder.
+
+Prompt selection is performed through a prompt registry.
+
+Existing prompt versions should not be overwritten when prompt behavior changes.
+
+Future prompt improvements should create a new version:
+
+```text
+ticket-analysis-v1
+        │
+        ├── Original Instructions
+        ├── Evaluation Dataset
+        └── Evaluation Results
+
+ticket-analysis-v2
+        │
+        ├── Modified Instructions
+        ├── New Evaluation Results
+        └── Measurable Comparison
+```
+
+This supports reproducibility, regression analysis, and explicit prompt-engineering evaluation.
+
+### LLM Retry and Failure Classification
+
+Only transient provider failures are retried.
+
+```text
+LLM Request
+    │
+    ├── Timeout ───────────────► Retry
+    ├── Rate Limit ────────────► Retry
+    ├── Connection Failure ────► Retry
+    ├── HTTP 5xx ──────────────► Retry
+    │
+    ├── Authentication Error ──► Fail Immediately
+    ├── HTTP 4xx ──────────────► Fail Immediately
+    ├── Empty Response ────────► Fail Immediately
+    ├── Malformed JSON ────────► Fail Immediately
+    └── Invalid Schema ────────► Fail Immediately
+```
+
+The Groq adapter uses the application's generic retry executor rather than implementing a provider-specific retry loop.
+
+After retry exhaustion, the original typed LLM failure is preserved at the service boundary.
+
+This allows downstream workflow components to distinguish between:
+
+* Timeouts.
+* Rate limits.
+* Provider availability failures.
+* Authentication failures.
+* Invalid requests.
+* Malformed responses.
+* Schema-invalid responses.
 
 ---
 
@@ -1123,31 +1459,28 @@ Example:
 ```env
 GROQ_API_KEY=your_actual_groq_api_key
 
-MODEL_NAME=llama-3.3-70b-versatile
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_TIMEOUT_SECONDS=30
+GROQ_MAX_TOKENS=1200
+GROQ_TEMPERATURE=0.1
+LLM_MAX_RETRIES=3
+
+PROMPT_VERSION=ticket-analysis-v1
 
 DATABASE_URL=postgresql://postgres:your_password@localhost:5432/supportiq-ai
 
 EMAIL_ADDRESS=your_support_email@gmail.com
-
 EMAIL_PASSWORD=your_google_app_password
 
 IMAP_SERVER=imap.gmail.com
-
 SMTP_SERVER=smtp.gmail.com
-
 SMTP_PORT=587
 
 EMAIL_POLL_INTERVAL_SECONDS=60
-
 EMAIL_FOLDER=INBOX
 
 MAX_ATTACHMENT_SIZE_MB=10
-
 ALLOWED_ATTACHMENT_TYPES=pdf,png,jpg,jpeg,txt,docx
-
-LLM_TIMEOUT_SECONDS=30
-
-LLM_MAX_RETRIES=3
 ```
 
 Never commit `.env`.
@@ -1317,7 +1650,7 @@ A successful SMTP transaction alone does not prove final mailbox delivery. For m
 
 ## Running Automated Tests
 
-Run all automated tests:
+Run the complete automated test suite:
 
 ```bash
 python -m pytest -v
@@ -1326,25 +1659,52 @@ python -m pytest -v
 Current result:
 
 ```text
-36 passed
+58 passed
 1 warning
 ```
 
-Run Hour 3 infrastructure tests:
+Run the focused Hour 4 AI infrastructure tests:
 
 ```bash
 python -m pytest \
-    tests/test_retry.py \
-    tests/test_smtp_service.py \
-    tests/test_email_ingestion_service.py \
+    tests/test_json_extractor.py \
+    tests/test_ticket_analysis_schema.py \
+    tests/test_groq_llm_service.py \
     -v
 ```
 
 Current result:
 
 ```text
-16 passed
+22 passed
 ```
+
+The focused Hour 4 suite verifies:
+
+* Clean JSON extraction.
+* JSON extraction from markdown code fences.
+* JSON extraction from surrounding response text.
+* Braces inside JSON string values.
+* JSON array rejection.
+* Empty-response rejection.
+* Missing-JSON rejection.
+* Valid ticket-analysis schema parsing.
+* Required-field enforcement.
+* Confidence-score bounds.
+* Unexpected-field rejection.
+* Valid Groq response handling.
+* Malformed JSON handling.
+* Schema-invalid AI output handling.
+* Timeout retry behavior.
+* Rate-limit retry behavior.
+* Authentication failure behavior.
+* Connection failure retry behavior.
+* Empty completion handling.
+* Invalid completion structure handling.
+* HTTP 5xx retry behavior.
+* HTTP 4xx immediate-failure behavior.
+
+All Hour 4 AI-infrastructure tests run against a mocked Groq client. No automated test in the current suite makes a real network call to Groq; the only real-provider verification to date is the manual smoke test recommended below.
 
 ---
 
@@ -1356,7 +1716,7 @@ Generate application-wide coverage:
 python -m pytest --cov=app --cov-report=term-missing -v
 ```
 
-Current result:
+Coverage as of the Hour 3 measurement (pending an updated Hour 4 run):
 
 ```text
 Name                                      Stmts   Miss  Cover
@@ -1380,6 +1740,8 @@ TOTAL                                       571    129    77%
 
 The lower coverage of `imap_service.py` is expected at the current stage because real IMAP integration is manually verified while transport-level unit tests using mocked IMAP connections have not yet been implemented.
 
+A `--cov=app` run including the new Hour 4 modules (`llm_service.py`, `groq_llm_service.py`, `json_extractor.py`, `ticket_analysis_schema.py`, prompt registry and definitions) has not yet been captured in this document and should be regenerated before submission.
+
 Coverage improvement is scheduled during the dedicated testing and hardening phase.
 
 ---
@@ -1388,12 +1750,13 @@ Coverage improvement is scheduled during the dedicated testing and hardening pha
 
 At the current development stage:
 
-* Groq API integration is not implemented.
-* Provider-independent LLM abstraction is not implemented.
-* AI ticket analysis is not implemented.
-* Prompt templates are not implemented.
-* AI output validation is not implemented.
+* Real Groq API smoke testing has not yet been completed.
+* AI classification accuracy has not yet been evaluated against a labeled dataset.
+* AI priority recommendation consistency has not yet been evaluated against expected labels.
+* Prompt edge cases and ambiguous customer requests require evaluation.
+* Prompt versions have not yet been benchmarked against each other.
 * Category normalization is not implemented.
+* Tag normalization is not implemented.
 * Deterministic priority assignment is not implemented.
 * Team routing is not implemented.
 * SQLAlchemy persistence is not implemented.
@@ -1403,7 +1766,7 @@ At the current development stage:
 * Inbox polling scheduler is not implemented.
 * Duplicate email processing prevention is not implemented.
 * Emails are not yet marked as processed.
-* Retry infrastructure is not yet integrated into transport services.
+* Retry infrastructure is not yet integrated into IMAP, SMTP, database, or workflow orchestration boundaries.
 * Ticket REST APIs are not implemented.
 * Manual agent review is not implemented.
 * Ticket lifecycle transitions are not implemented.
@@ -1436,24 +1799,25 @@ At the current development stage:
 * Structured logging.
 * No intentional credential logging.
 * Per-message failure isolation.
+* LLM prompt input boundaries.
+* AI output schema validation.
+* Prompt-injection mitigation instructions.
+* LLM output trust boundaries.
+* Selective retry of transient LLM provider failures.
 
 ### Planned
 
 * Database transaction boundaries.
 * Parameterized persistence through SQLAlchemy.
-* LLM prompt input boundaries.
-* AI output schema validation.
 * Restricted ticket status transitions.
 * Idempotent email processing.
 * Duplicate ticket prevention.
-* Retry integration at orchestration boundaries.
+* Retry integration at IMAP/SMTP/database orchestration boundaries.
 * Sensitive-data redaction filters.
 * API input validation.
 * API error response sanitization.
 * Attachment MIME signature validation.
 * Database connection pooling.
-* Prompt-injection mitigation.
-* LLM output trust boundaries.
 
 ---
 
@@ -1487,9 +1851,9 @@ PostgreSQL provides:
 
 ### Why Groq?
 
-Groq is planned as the LLM inference provider because it provides fast inference and supports instruction-tuned models suitable for classification, summarization, sentiment analysis, priority recommendation, and structured ticket extraction.
+Groq is used as the LLM inference provider because it provides fast inference and supports instruction-tuned models suitable for classification, summarization, sentiment analysis, priority recommendation, and structured ticket extraction.
 
-The AI integration will be isolated behind a service boundary to reduce provider coupling.
+The AI integration is isolated behind a service boundary to reduce provider coupling.
 
 ### Why IMAP and SMTP?
 
@@ -1558,6 +1922,43 @@ Automatic acknowledgements belong to the end-to-end ticket-processing workflow.
 
 Separating transport from business orchestration prevents outbound email delivery from becoming tightly coupled to ticket creation logic.
 
+### Why a Provider-Independent LLM Boundary?
+
+The application workflow depends on an abstract `LLMService` contract rather than directly depending on the Groq SDK.
+
+This reduces infrastructure coupling and allows the provider implementation to be replaced without redesigning downstream ticket-processing logic.
+
+### Why Version Prompts?
+
+Prompt changes can alter classification accuracy, priority recommendations, confidence scores, and downstream workflow behavior.
+
+Explicit prompt versions provide:
+
+* Reproducibility.
+* Regression comparison.
+* Evaluation traceability.
+* Safer prompt evolution.
+* Clear documentation of the exact prompt used during demonstration and evaluation.
+
+### Why Treat LLM Output as Untrusted Data?
+
+Large Language Models may produce malformed JSON, missing fields, unexpected fields, invalid confidence values, or responses that violate application expectations.
+
+SupportIQ AI therefore validates all model output before allowing it to enter downstream business logic or persistence layers.
+
+### Why Retry Only Transient LLM Failures?
+
+Retrying permanent failures wastes API quota, increases latency, and can amplify operational failures.
+
+SupportIQ AI retries only failures that may succeed on a subsequent attempt:
+
+* Timeouts.
+* Rate limits.
+* Connection failures.
+* Provider-side HTTP 5xx failures.
+
+Authentication errors, invalid requests, malformed responses, and schema-invalid responses fail immediately.
+
 ---
 
 ## Development Roadmap
@@ -1591,21 +1992,58 @@ Secure IMAP ingestion, MIME parsing, attachment processing, integration testing,
 * Application-wide coverage measurement.
 * Real IMAP regression verification.
 
-### Hours 4–5 — Next
+### Hour 4 — Completed
 
-* Groq API client.
-* Provider-independent LLM service boundary.
-* Prompt architecture.
-* Prompt versioning.
-* Structured ticket analysis.
-* JSON extraction.
+* Groq Python SDK integration.
+* Provider-independent `LLMService` boundary.
+* Groq provider adapter.
+* Centralized Groq configuration.
+* Versioned prompt architecture.
+* Prompt registry.
+* Structured ticket-analysis request contract.
+* Structured ticket-analysis response contract.
+* JSON-only prompt constraints.
+* Prompt-injection mitigation instructions.
+* Robust JSON object extraction.
 * AI response parsing.
-* AI schema contracts.
-* Retry integration.
+* Pydantic AI response validation.
+* LLM-specific exception hierarchy.
+* Retryable and non-retryable failure classification.
+* Selective LLM retry integration.
 * Timeout handling.
 * Rate-limit handling.
-* AI failure classification.
-* Unit tests.
+* Connection failure handling.
+* HTTP 4xx/5xx differentiation.
+* Authentication failure handling.
+* Invalid completion structure handling.
+* Malformed JSON handling.
+* Schema-invalid response handling.
+* Typed failure preservation after retry exhaustion.
+* Groq provider unit tests.
+* JSON extractor unit tests.
+* AI schema contract unit tests.
+* Focused test verification.
+* Full regression testing.
+
+### Hour 5 — Next
+
+* Controlled real Groq API smoke test.
+* Real support-ticket analysis verification.
+* Labeled AI evaluation dataset.
+* Classification accuracy measurement.
+* Priority recommendation accuracy measurement.
+* Sentiment accuracy measurement.
+* Department recommendation accuracy measurement.
+* Structured-output validity measurement.
+* Prompt edge-case testing.
+* Ambiguous-ticket testing.
+* Prompt-injection resistance testing.
+* Confidence-score behavior evaluation.
+* Prompt quality refinement.
+* Prompt version comparison if changes are required.
+* AI evaluation report generation.
+* AI prompt deliverable documentation.
+* Final Hour 5 regression verification.
 
 ### Hours 6–7
 
@@ -1728,7 +2166,7 @@ The completed repository will contain:
 * Gmail IMAP access is authenticated using a Google App Password.
 * Gmail SMTP is used for outbound email delivery.
 * PostgreSQL runs locally during development and demonstration.
-* Groq will be used as the LLM inference provider.
+* Groq is used as the LLM inference provider.
 * AI output will not be trusted directly and will pass through validation and normalization layers.
 * Priority assignment will use a hybrid approach combining AI recommendations and deterministic business rules.
 * Team routing will be configurable.
@@ -1737,8 +2175,9 @@ The completed repository will contain:
 * Runtime customer data, attachments, credentials, and logs must not be committed to Git.
 * Email Message-ID values will form part of the idempotency strategy.
 * Successfully retrieved emails will not be marked as processed until the complete downstream processing boundary succeeds.
-* Retry behavior will be applied selectively to transient failures rather than indiscriminately retrying all exceptions.
+* Retry behavior is applied selectively to transient failures rather than indiscriminately retrying all exceptions.
 * The modular monolith architecture is intended to provide production-style separation of concerns without introducing unnecessary distributed-system complexity.
+* Prompt version `ticket-analysis-v1` has not yet been validated against real Groq responses or a labeled evaluation set; its output quality is unverified as of Hour 4.
 
 ---
 

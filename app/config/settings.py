@@ -7,11 +7,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "SupportIQ AI"
 
+    # Groq configuration
     groq_api_key: str
-    model_name: str = "llama-3.3-70b-versatile"
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_timeout_seconds: float = Field(default=30.0, gt=0)
+    groq_max_tokens: int = Field(default=1200, gt=0)
+    groq_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
 
+    # Prompt configuration
+    prompt_version: str = "ticket-analysis-v1"
+
+    # Database configuration
     database_url: str
 
+    # Email configuration
     email_address: str
     email_password: str
 
@@ -22,10 +31,11 @@ class Settings(BaseSettings):
     email_poll_interval_seconds: int = Field(default=60, ge=10)
     email_folder: str = "INBOX"
 
+    # Attachment configuration
     max_attachment_size_mb: int = Field(default=10, gt=0)
     allowed_attachment_types: str = "pdf,png,jpg,jpeg,txt,docx"
 
-    llm_timeout_seconds: int = Field(default=30, gt=0)
+    # LLM retry configuration
     llm_max_retries: int = Field(default=3, ge=0)
 
     model_config = SettingsConfigDict(

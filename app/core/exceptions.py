@@ -145,3 +145,66 @@ class RetryExhaustedError(SupportIQError):
     default_message = (
         "The operation failed after exhausting all retries."
     )
+
+# ============================================================
+# LLM Exceptions
+# ============================================================
+
+
+class LLMError(SupportIQError):
+    """Base exception for all LLM-related failures."""
+
+    default_message = "An LLM operation failed."
+
+
+class LLMConfigurationError(LLMError):
+    """Raised when the LLM provider configuration is invalid."""
+
+    default_message = "LLM provider configuration is invalid."
+
+
+class LLMAuthenticationError(LLMError):
+    """Raised when LLM provider authentication fails."""
+
+    default_message = "LLM provider authentication failed."
+
+
+class RetryableLLMError(LLMError, RetryableError):
+    """Base exception for transient LLM failures."""
+
+    default_message = "A retryable LLM operation failed."
+
+
+class LLMTimeoutError(RetryableLLMError):
+    """Raised when the LLM provider request times out."""
+
+    default_message = "The LLM provider request timed out."
+
+
+class LLMRateLimitError(RetryableLLMError):
+    """Raised when the LLM provider rate limit is exceeded."""
+
+    default_message = "The LLM provider rate limit was exceeded."
+
+
+class LLMProviderError(RetryableLLMError):
+    """Raised for transient LLM provider-side failures."""
+
+    default_message = "The LLM provider operation failed."
+
+
+class LLMResponseError(LLMError):
+    """Raised when the provider returns an unusable response."""
+
+    default_message = "The LLM provider returned an unusable response."
+
+
+class LLMJSONExtractionError(LLMResponseError):
+    """Raised when valid JSON cannot be extracted."""
+
+    default_message = "Valid JSON could not be extracted from the LLM response."
+
+class LLMRequestError(LLMError):
+    """Raised when the provider rejects a non-retryable request."""
+
+    default_message = "The LLM provider rejected the request."

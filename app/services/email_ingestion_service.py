@@ -8,6 +8,7 @@ from app.core.constants import (
     FailureType,
     LogEvent,
     ProcessingStatus,
+    WorkflowStage,
 )
 from app.core.exceptions import (
     EmailConnectionError,
@@ -24,6 +25,9 @@ from app.services.acknowledgement_service import (
     AcknowledgementService,
 )
 from app.services.imap_service import IMAPService
+from app.services.workflow_execution_service import (
+    WorkflowExecutionService,
+)
 from app.services.workflow_service import WorkflowService
 
 
@@ -40,6 +44,9 @@ class EmailIngestionService:
             AcknowledgementService | None
         ) = None,
         db: Session | None = None,
+        workflow_execution_service: (
+            WorkflowExecutionService | None
+        ) = None,
     ) -> None:
         self.imap_service = (
             imap_service or IMAPService()
@@ -49,6 +56,9 @@ class EmailIngestionService:
             acknowledgement_service
         )
         self.db = db
+        self.workflow_execution_service = (
+            workflow_execution_service
+        )
 
     def _validate_ingested_email(
         self,
@@ -131,36 +141,155 @@ class EmailIngestionService:
             )
 
         ticket_id: int | None = None
+        workflow_execution = None
+        workflow_delegated = False
 
         if self.workflow_service is not None:
-            workflow_result = (
-                self.workflow_service.process_email(
-                    parsed_email
-                )
-            )
-
-            ticket_id = workflow_result.ticket_id
-
-            if (
-                self.acknowledgement_service is not None
-                and self.db is not None
-            ):
-                try:
-                    self.acknowledgement_service.send_acknowledgement(
-                        self.db,
-                        ticket_id=ticket_id,
+            try:
+                if self.workflow_execution_service is not None:
+                    workflow_execution = (
+                        self.workflow_execution_service
+                        .start_execution(
+                            message_id=parsed_email.message_id,
+                            stage=WorkflowStage.EMAIL_FETCHED,
+                        )
                     )
 
-                except Exception:
-                    logger.exception(
-                        "Customer acknowledgement delivery failed.",
-                        extra={
-                            "ticket_id": ticket_id,
-                            "message_id": (
-                                parsed_email.message_id
-                            ),
-                        },
+                    self.workflow_execution_service.advance_stage(
+                        workflow_execution,
+                        stage=WorkflowStage.EMAIL_PARSED,
                     )
+
+                if workflow_execution is not None:
+                    workflow_delegated = True
+                    workflow_result = (
+                        self.workflow_service.process_email(
+                            parsed_email,
+                            workflow_execution=workflow_execution,
+                        )
+                    )
+                else:
+                    workflow_result = (
+                        self.workflow_service.process_email(
+                            parsed_email
+                        )
+                    )
+
+                ticket_id = workflow_result.ticket_id
+
+                acknowledgement_succeeded = False
+                acknowledgement_error = None
+
+                if (
+                    self.acknowledgement_service is not None
+                    and self.db is not None
+                ):
+                    try:
+                        (
+                            self.acknowledgement_service
+                            .send_acknowledgement(
+                                self.db,
+                                ticket_id=ticket_id,
+                            )
+                        )
+
+                        acknowledgement_succeeded = True
+
+                    except Exception as exc:
+                        acknowledgement_error = exc
+
+                        logger.exception(
+                            "Customer acknowledgement delivery failed.",
+                            extra={
+                                "ticket_id": ticket_id,
+                                "message_id": (
+                                    parsed_email.message_id
+                                ),
+                                "execution_id": (
+                                    workflow_result.execution_id
+                                    if hasattr(
+                                        workflow_result,
+                                        "execution_id",
+                                    )
+                                    else None
+                                ),
+                            },
+                        )
+
+                else:
+                    acknowledgement_succeeded = True
+
+                if (
+                    workflow_execution is not None
+                    and self.workflow_execution_service is not None
+                ):
+                    if acknowledgement_succeeded:
+                        if (
+                            self.acknowledgement_service is not None
+                            and self.db is not None
+                        ):
+                            (
+                                self.workflow_execution_service
+                                .advance_stage(
+                                    workflow_execution,
+                                    stage=(
+                                        WorkflowStage
+                                        .ACKNOWLEDGEMENT_SENT
+                                    ),
+                                )
+                            )
+
+                        (
+                            self.workflow_execution_service
+                            .complete_execution(
+                                workflow_execution
+                            )
+                        )
+
+                    elif acknowledgement_error is not None:
+                        try:
+                            (
+                                self.workflow_execution_service
+                                .fail_execution(
+                                    workflow_execution,
+                                    error=acknowledgement_error,
+                                )
+                            )
+
+                        except Exception:
+                            logger.exception(
+                                "Failed to persist acknowledgement "
+                                "failure telemetry.",
+                                extra={
+                                    "ticket_id": ticket_id,
+                                    "execution_id": (
+                                        workflow_execution.execution_id
+                                    ),
+                                },
+                            )
+            except Exception as exc:
+                if (
+                    workflow_execution is not None
+                    and not workflow_delegated
+                    and self.workflow_execution_service is not None
+                ):
+                    try:
+                        self.workflow_execution_service.fail_execution(
+                            workflow_execution,
+                            error=exc,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to persist ingestion telemetry failure.",
+                            extra={
+                                "execution_id": (
+                                    workflow_execution.execution_id
+                                ),
+                                "message_id": parsed_email.message_id,
+                            },
+                        )
+
+                raise
 
         log_event(
             logger,
@@ -203,6 +332,8 @@ class EmailIngestionService:
                 imap_message_id,
                 parsed_email,
             ) in fetched_emails:
+                workflow_execution = None
+                workflow_delegated = False
 
                 try:
                     processing_result = (
@@ -243,6 +374,27 @@ class EmailIngestionService:
                     )
 
                 except Exception as exc:
+                    if (
+                        workflow_execution is not None
+                        and not workflow_delegated
+                        and self.workflow_execution_service is not None
+                    ):
+                        try:
+                            self.workflow_execution_service.fail_execution(
+                                workflow_execution,
+                                error=exc,
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Failed to persist ingestion telemetry failure.",
+                                extra={
+                                    "execution_id": (
+                                        workflow_execution.execution_id
+                                    ),
+                                    "message_id": parsed_email.message_id,
+                                },
+                            )
+
                     logger.exception(
                         "Unexpected email ingestion failure.",
                         extra={

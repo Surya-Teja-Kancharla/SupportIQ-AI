@@ -7,6 +7,24 @@ class ProcessingStatus(StrEnum):
     FAILED = "failed"
     SKIPPED = "skipped"
 
+class WorkflowExecutionStatus(StrEnum):
+    RUNNING = "RUNNING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+
+class WorkflowStage(StrEnum):
+    EMAIL_FETCHED = "EMAIL_FETCHED"
+    EMAIL_PARSED = "EMAIL_PARSED"
+    AI_ANALYSIS_STARTED = "AI_ANALYSIS_STARTED"
+    AI_ANALYSIS_COMPLETED = "AI_ANALYSIS_COMPLETED"
+    VALIDATION_COMPLETED = "VALIDATION_COMPLETED"
+    PRIORITY_ASSIGNED = "PRIORITY_ASSIGNED"
+    TEAM_ASSIGNED = "TEAM_ASSIGNED"
+    TICKET_CREATED = "TICKET_CREATED"
+    ACKNOWLEDGEMENT_SENT = "ACKNOWLEDGEMENT_SENT"
+    WORKFLOW_COMPLETED = "WORKFLOW_COMPLETED"
+
 
 class FailureType(StrEnum):
     CONNECTION_ERROR = "connection_error"
@@ -47,6 +65,16 @@ class LogEvent(StrEnum):
 
     RETRY_SCHEDULED = "retry_scheduled"
     RETRIES_EXHAUSTED = "retries_exhausted"
+
+    WORKFLOW_EXECUTION_STARTED = "workflow_execution_started"
+    WORKFLOW_STAGE_ADVANCED = "workflow_stage_advanced"
+    WORKFLOW_RETRY_RECORDED = "workflow_retry_recorded"
+    WORKFLOW_EXECUTION_SUCCEEDED = "workflow_execution_succeeded"
+    WORKFLOW_EXECUTION_FAILED = "workflow_execution_failed"
+
+    HEALTH_CHECK_SUCCEEDED = "health_check_succeeded"
+    HEALTH_CHECK_FAILED = "health_check_failed"
+    METRICS_REQUESTED = "metrics_requested"
 
 class TicketStatus:
     OPEN = "OPEN"

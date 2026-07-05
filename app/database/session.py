@@ -19,6 +19,17 @@ SessionLocal = sessionmaker(
 )
 
 
+def create_session() -> Session:
+    """
+    Create an independent SQLAlchemy session.
+
+    Hour 14 uses this session for durable workflow execution
+    telemetry so monitoring writes can commit independently
+    of the main business transaction.
+    """
+    return SessionLocal()
+
+
 def get_db_session():
     session = SessionLocal()
 

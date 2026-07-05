@@ -20,6 +20,7 @@ class TicketProcessingResult(BaseModel):
     ticket_id: int
     ticket_number: str
     message_id: str
+    execution_id: str | None = None
 
     analysis: NormalizedTicketAnalysis
     priority_decision: PriorityDecision

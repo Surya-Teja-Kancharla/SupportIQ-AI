@@ -1,8 +1,7 @@
 from collections.abc import Generator
 
-from sqlalchemy.orm import Session
-
 from fastapi import Depends
+from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
 from app.repositories import (
@@ -14,13 +13,17 @@ from app.repositories import (
 from app.services.dashboard_service import DashboardService
 
 
-def get_db_session() -> Generator[Session, None, None]:
-    session = SessionLocal()
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
 
     try:
-        yield session
+        yield db
     finally:
-        session.close()
+        db.close()
+
+
+# Backward-compatible alias for existing Hour 10 routes/tests.
+get_db_session = get_db
 
 
 def get_dashboard_service(

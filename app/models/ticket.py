@@ -16,6 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 
 if TYPE_CHECKING:
+    from app.models.internal_note import InternalNote
     from app.models.ticket_attachment import TicketAttachment
     from app.models.ticket_audit_log import TicketAuditLog
 
@@ -137,6 +138,12 @@ class Ticket(Base):
     )
 
     audit_logs: Mapped[list["TicketAuditLog"]] = relationship(
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    internal_notes: Mapped[list["InternalNote"]] = relationship(
         back_populates="ticket",
         cascade="all, delete-orphan",
         passive_deletes=True,
